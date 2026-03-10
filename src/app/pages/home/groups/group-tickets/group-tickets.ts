@@ -157,6 +157,26 @@ export class GroupTickets implements OnInit {
     return this.pendiente.length + this.enProgreso.length + this.revision.length + this.hecho.length + this.bloqueado.length;
   }
 
+  activeFilter: 'Mis tickets' | 'Sin asignar' | 'Prioridad Alta' | null = null;
+
+  get filteredGroupTickets() {
+    if (!this.selectedGroup) return [];
+    let list = this.allTickets.filter(t => t.groupId === this.selectedGroup!.id);
+    if (this.activeFilter === 'Mis tickets') {
+      list = list.filter(t => t.assignee === this.currentUser.email);
+    } else if (this.activeFilter === 'Sin asignar') {
+      list = list.filter(t => !t.assignee);
+    } else if (this.activeFilter === 'Prioridad Alta') {
+      list = list.filter(t => t.priority === 'Urgente' || t.priority === 'Alta');
+    }
+    return list;
+  }
+
+  setFilter(filter: 'Mis tickets' | 'Sin asignar' | 'Prioridad Alta' | null) {
+    this.activeFilter = filter;
+    this.refreshGroupTickets();
+  }
+
   refreshGroupTickets() {
     if (!this.selectedGroup) {
       this.pendiente = [];
@@ -167,7 +187,7 @@ export class GroupTickets implements OnInit {
       return;
     }
 
-    const groupTickets = this.allTickets.filter(t => t.groupId === this.selectedGroup!.id);
+    const groupTickets = this.filteredGroupTickets;
 
     this.pendiente = groupTickets.filter(t => t.state === 'Pendiente');
     this.enProgreso = groupTickets.filter(t => t.state === 'En progreso');

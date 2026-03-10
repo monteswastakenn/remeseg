@@ -95,11 +95,25 @@ export class Tickets {
     }
   ];
 
+  activeFilter: 'Mis tickets' | 'Sin asignar' | 'Prioridad Alta' | null = null;
+
+  get filteredTickets() {
+    let list = this.tickets;
+    if (this.activeFilter === 'Mis tickets') {
+      list = list.filter(t => t.assignee === this.currentUser.email);
+    } else if (this.activeFilter === 'Sin asignar') {
+      list = list.filter(t => !t.assignee);
+    } else if (this.activeFilter === 'Prioridad Alta') {
+      list = list.filter(t => t.priority === 'Urgente' || t.priority === 'Alta');
+    }
+    return list;
+  }
+
   // Logic to separate tickets into columns
-  get pendiente() { return this.tickets.filter(t => t.state === 'Pendiente'); }
-  get enProgreso() { return this.tickets.filter(t => t.state === 'En progreso'); }
-  get revision() { return this.tickets.filter(t => t.state === 'Revisión'); }
-  get hecho() { return this.tickets.filter(t => t.state === 'Hecho'); }
+  get pendiente() { return this.filteredTickets.filter(t => t.state === 'Pendiente'); }
+  get enProgreso() { return this.filteredTickets.filter(t => t.state === 'En progreso'); }
+  get revision() { return this.filteredTickets.filter(t => t.state === 'Revisión'); }
+  get hecho() { return this.filteredTickets.filter(t => t.state === 'Hecho'); }
 
   connectedLists = ['pendienteList', 'enProgresoList', 'revisionList', 'hechoList'];
 

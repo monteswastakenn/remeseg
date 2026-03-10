@@ -25,6 +25,20 @@
 
     <!-- Módulo visible solo cuando hay un grupo seleccionado -->
     <ng-container *ngIf="selectedGroup">
+        <div class="filters mb-4 flex gap-2 overflow-x-auto pb-2">
+            <p-button label="Todos" [rounded]="true" [severity]="activeFilter === null ? 'primary' : 'secondary'"
+                [outlined]="activeFilter !== null" (onClick)="setFilter(null)"></p-button>
+            <p-button label="Mis tickets" [rounded]="true"
+                [severity]="activeFilter === 'Mis tickets' ? 'info' : 'secondary'"
+                [outlined]="activeFilter !== 'Mis tickets'" (onClick)="setFilter('Mis tickets')"></p-button>
+            <p-button label="Sin asignar" [rounded]="true"
+                [severity]="activeFilter === 'Sin asignar' ? 'help' : 'secondary'"
+                [outlined]="activeFilter !== 'Sin asignar'" (onClick)="setFilter('Sin asignar')"></p-button>
+            <p-button label="Prioridad Alta" [rounded]="true"
+                [severity]="activeFilter === 'Prioridad Alta' ? 'danger' : 'secondary'"
+                [outlined]="activeFilter !== 'Prioridad Alta'" (onClick)="setFilter('Prioridad Alta')"></p-button>
+        </div>
+
         <div class="kanban-board" *ngIf="viewMode === 'kanban'">
             <div class="summary-card">
                 <div class="count">{{ totalTickets }}</div>
@@ -365,7 +379,7 @@
 
     <!-- Modo Lista (Moviéndolo dentro del contenedor para respetar el if del grupo) -->
     <div class="list-view-container mt-4" *ngIf="selectedGroup && viewMode === 'list'">
-        <p-table [value]="allTickets" [rows]="10" [paginator]="true" styleClass="p-datatable-sm"
+        <p-table [value]="filteredGroupTickets" [rows]="10" [paginator]="true" styleClass="p-datatable-sm"
             responsiveLayout="scroll" [rowHover]="true" selectionMode="single" [(selection)]="selectedTicket"
             dataKey="id" (onRowSelect)="openTicket($any($event.data))" class="cursor-pointer">
             <ng-template pTemplate="header">
@@ -379,7 +393,7 @@
                 </tr>
             </ng-template>
             <ng-template pTemplate="body" let-ticket>
-                <tr [pSelectableRow]="ticket" *ngIf="ticket.groupId === selectedGroup.id">
+                <tr [pSelectableRow]="ticket">
                     <td><b>{{ticket.id}}</b></td>
                     <td>{{ticket.title}}</td>
                     <td>
