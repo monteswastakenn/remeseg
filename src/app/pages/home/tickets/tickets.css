@@ -3,11 +3,8 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    /* Ocupa toda la pantalla */
     overflow: hidden;
-    /* Evita doble scroll, solo el tablero hará scroll */
     padding: 1.5rem 2rem;
-    /* Eliminamos el fondo blanco, dejamos que tome el fondo oscuro de tu app */
     background: transparent;
 }
 
@@ -18,7 +15,6 @@
 
 .head p-button {
     margin: 10px 0;
-    /* superior e inferior 10px, izquierda/derecha 0 */
 }
 
 .head h1 {
@@ -34,12 +30,11 @@
     margin: 0;
 }
 
-/* --- TABLERO KANBAN ESTRICTAMENTE HORIZONTAL --- */
+/* --- TABLERO KANBAN --- */
 .kanban-board {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    /* ESTO FUERZA LO HORIZONTAL */
     gap: 1.5rem;
     overflow-x: auto;
     overflow-y: hidden;
@@ -48,16 +43,13 @@
     align-items: stretch;
 }
 
-/* --- COLUMNAS (Tema Oscuro / Transparente) --- */
+/* --- COLUMNAS --- */
 .kanban-column {
     flex: 0 0 340px;
-    /* Ancho fijo para que no se apachurren */
     display: flex;
     flex-direction: column;
     background: rgba(255, 255, 255, 0.03);
-    /* Fondo oscuro original */
     border: 1px solid rgba(255, 255, 255, 0.08);
-    /* Borde sutil oscuro */
     border-radius: 12px;
     max-height: 100%;
 }
@@ -74,7 +66,7 @@
     opacity: 0.9;
 }
 
-/* --- ZONA DONDE CAEN LAS TARJETAS --- */
+/* --- ZONA DE TARJETAS --- */
 .kanban-list {
     flex: 1;
     overflow-y: auto;
@@ -84,13 +76,11 @@
     gap: 0.75rem;
 }
 
-/* --- TARJETAS DE TICKET (Tema Oscuro PrimeNG) --- */
+/* --- TARJETAS --- */
 ::ng-deep .kanban-card {
     background: var(--surface-card) !important;
-    /* Toma el color de tarjeta de tu tema PrimeNG */
     border-radius: 8px !important;
     border: 1px solid var(--surface-border) !important;
-    /* Toma el borde de tu tema */
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
     transition: all 0.2s ease !important;
     cursor: grab !important;
@@ -98,7 +88,6 @@
 
 ::ng-deep .kanban-card:hover {
     box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4) !important;
-    /* Sombra más fuerte en oscuro */
     border-color: rgba(255, 255, 255, 0.2) !important;
     transform: translateY(-2px);
 }
@@ -107,7 +96,6 @@
     cursor: grabbing !important;
 }
 
-/* Matar el padding tosco de PrimeNG */
 ::ng-deep .kanban-card .p-card-body,
 ::ng-deep .kanban-card .p-card-content {
     padding: 0 !important;
@@ -138,12 +126,10 @@
     color: var(--text-color-secondary);
 }
 
-/* Detalles base (fechas y avatar) */
 .row-details {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
-    /* Línea separadora adaptada al modo oscuro */
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -157,7 +143,7 @@
     color: var(--text-color-secondary);
 }
 
-/* --- TAGS & AVATAR --- */
+/* --- TAGS Y AVATAR --- */
 ::ng-deep .custom-llm-tag .p-tag {
     background: linear-gradient(135deg, #6b4cff 0%, #aa64ff 100%) !important;
     color: white !important;
@@ -172,10 +158,9 @@
     height: 1.8rem !important;
     font-size: 0.8rem !important;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    /* Ligero borde para que resalte en el fondo oscuro */
 }
 
-/* --- SCROLLBARS ADAPTADOS A MODO OSCURO --- */
+/* --- SCROLLBARS --- */
 .kanban-board::-webkit-scrollbar,
 .kanban-list::-webkit-scrollbar {
     height: 8px;
@@ -190,7 +175,6 @@
 .kanban-board::-webkit-scrollbar-thumb,
 .kanban-list::-webkit-scrollbar-thumb {
     background-color: rgba(255, 255, 255, 0.15);
-    /* Gris transparente bonito */
     border-radius: 10px;
 }
 
@@ -199,7 +183,7 @@
     background-color: rgba(255, 255, 255, 0.3);
 }
 
-/* --- EFECTOS DE DRAG & DROP (Angular CDK) --- */
+/* --- DRAG & DROP (CDK) --- */
 .cdk-drag-preview {
     box-sizing: border-box;
     border-radius: 8px;
@@ -224,12 +208,7 @@
     transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
 }
 
-
-/* =========================================================
-   ESTILOS DEL MODAL (Edición de Ticket)
-   ========================================================= */
-
-/* 1. Forzamos las clases de estructura que te faltaban */
+/* --- MODAL (edición) --- */
 .flex-column {
     display: flex !important;
     flex-direction: column !important;
@@ -243,6 +222,10 @@
     gap: 0.25rem !important;
 }
 
+.gap-2 {
+    gap: 0.5rem !important;
+}
+
 .gap-3 {
     gap: 0.75rem !important;
 }
@@ -251,57 +234,47 @@
     gap: 1.5rem !important;
 }
 
-.mt-3 {
-    margin-top: 1rem !important;
-}
-
-/* 2. Estilos limpios para los Labels (Títulos de los campos) */
+/* Estilos para los labels del modal */
 ::ng-deep .p-dialog label {
     font-size: 0.9rem;
     font-weight: 600;
-    color: var(--text-color, #ffffff);
+    color: var(--text-color);
     opacity: 0.85;
-    margin-bottom: -0.25rem;
-    /* Acerca el label al input */
+    margin-bottom: 0.15rem;
 }
 
-/* 3. Estilos unificados para Inputs, Textareas y Selects */
+/* Inputs, textareas y selects */
 ::ng-deep .p-dialog input.p-inputtext,
 ::ng-deep .p-dialog textarea.p-inputtext,
 ::ng-deep .p-dialog .p-select {
     background: rgba(255, 255, 255, 0.05) !important;
-    /* Fondo oscurito elegante */
     border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    color: var(--text-color, #ffffff) !important;
+    color: var(--text-color) !important;
     border-radius: 8px !important;
     padding: 0.6rem 0.75rem !important;
     font-size: 0.95rem;
     transition: all 0.2s ease !important;
 }
 
-/* 4. Efecto Focus (Cuando le das clic a un input) */
 ::ng-deep .p-dialog input.p-inputtext:focus,
 ::ng-deep .p-dialog textarea.p-inputtext:focus,
 ::ng-deep .p-dialog .p-select.p-focus {
     outline: none !important;
-    border-color: var(--primary-color, #10b981) !important;
-    /* Color principal */
+    border-color: var(--primary-color) !important;
     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2) !important;
 }
 
-/* 5. Ajuste del ícono en el campo del Modelo LLM */
+/* Ícono en campo LLM (si se usa) */
 ::ng-deep .p-input-icon-left>i {
     color: var(--text-color-secondary) !important;
     margin-top: -0.5rem !important;
-    /* Centra el ícono verticalmente */
 }
 
 ::ng-deep .p-input-icon-left>input {
     padding-left: 2.5rem !important;
-    /* Espacio para que el texto no pise el ícono */
 }
 
-/* 6. Alinear los botones del Footer */
+/* Footer del modal */
 ::ng-deep .p-dialog .p-dialog-footer {
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     padding: 1rem 1.5rem;

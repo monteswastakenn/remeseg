@@ -18,21 +18,20 @@
                 <p-card *ngFor="let ticket of pendiente" cdkDrag class="kanban-card cursor-pointer"
                     (click)="openTicket(ticket)">
                     <ng-template pTemplate="header">
-                        <div class="card-header pt-3 px-3">
-                            <b class="text-sm font-semibold">{{ ticket.title }}</b>
+                        <div class="card-header">
+                            <div class="flex align-items-center gap-2">
+                                <b class="text-sm font-semibold">{{ ticket.title }}</b>
+
+                            </div>
                             <p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                         </div>
                     </ng-template>
-                    <div class="card-content px-3 pb-3">
-                        <small class="text-color-secondary block mb-2">ID: {{ ticket.id }}</small>
-                        <p-tag *ngIf="ticket.llmModel" [value]="ticket.llmModel" icon="pi pi-sparkles"
-                            styleClass="custom-llm-tag text-xs mb-2"></p-tag>
-                        <div class="row-details flex justify-content-between align-items-center">
+                    <div class="card-content">
+                        <div class="row-details">
                             <div class="flex flex-column gap-1">
-                                <span class="date text-xs text-color-secondary"><i class="pi pi-calendar"></i> Cr: {{
-                                    ticket.createdAt }}</span>
-                                <span class="date text-xs text-color-secondary" *ngIf="ticket.dueDate"><i
-                                        class="pi pi-clock"></i> Vc: {{ ticket.dueDate }}</span>
+                                <span class="date"><i class="pi pi-calendar"></i> Creado: {{ ticket.createdAt }}</span>
+                                <span class="date" *ngIf="ticket.dueDate"><i class="pi pi-clock"></i> Límite: {{
+                                    ticket.dueDate }}</span>
                             </div>
                             <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
                                 [title]="ticket.assignee"></p-avatar>
@@ -40,6 +39,7 @@
                     </div>
                 </p-card>
             </div>
+
         </div>
 
         <!-- Columna En progreso -->
@@ -51,21 +51,20 @@
                 <p-card *ngFor="let ticket of enProgreso" cdkDrag class="kanban-card cursor-pointer"
                     (click)="openTicket(ticket)">
                     <ng-template pTemplate="header">
-                        <div class="card-header pt-3 px-3">
-                            <b class="text-sm font-semibold">{{ ticket.title }}</b>
+                        <div class="card-header">
+                            <div class="flex align-items-center gap-2">
+                                <b class="text-sm font-semibold">{{ ticket.title }}</b>
+
+                            </div>
                             <p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                         </div>
                     </ng-template>
-                    <div class="card-content px-3 pb-3">
-                        <small class="text-color-secondary block mb-2">ID: {{ ticket.id }}</small>
-                        <p-tag *ngIf="ticket.llmModel" [value]="ticket.llmModel" icon="pi pi-sparkles"
-                            styleClass="custom-llm-tag text-xs mb-2"></p-tag>
-                        <div class="row-details flex justify-content-between align-items-center">
+                    <div class="card-content">
+                        <div class="row-details">
                             <div class="flex flex-column gap-1">
-                                <span class="date text-xs text-color-secondary"><i class="pi pi-calendar"></i> Cr: {{
-                                    ticket.createdAt }}</span>
-                                <span class="date text-xs text-color-secondary" *ngIf="ticket.dueDate"><i
-                                        class="pi pi-clock"></i> Vc: {{ ticket.dueDate }}</span>
+                                <span class="date"><i class="pi pi-calendar"></i> Creado: {{ ticket.createdAt }}</span>
+                                <span class="date" *ngIf="ticket.dueDate"><i class="pi pi-clock"></i> Límite: {{
+                                    ticket.dueDate }}</span>
                             </div>
                             <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
                                 [title]="ticket.assignee"></p-avatar>
@@ -84,21 +83,20 @@
                 <p-card *ngFor="let ticket of revision" cdkDrag class="kanban-card cursor-pointer"
                     (click)="openTicket(ticket)">
                     <ng-template pTemplate="header">
-                        <div class="card-header pt-3 px-3">
-                            <b class="text-sm font-semibold">{{ ticket.title }}</b>
+                        <div class="card-header">
+                            <div class="flex align-items-center gap-2">
+                                <b class="text-sm font-semibold">{{ ticket.title }}</b>
+
+                            </div>
                             <p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                         </div>
                     </ng-template>
-                    <div class="card-content px-3 pb-3">
-                        <small class="text-color-secondary block mb-2">ID: {{ ticket.id }}</small>
-                        <p-tag *ngIf="ticket.llmModel" [value]="ticket.llmModel" icon="pi pi-sparkles"
-                            styleClass="custom-llm-tag text-xs mb-2"></p-tag>
-                        <div class="row-details flex justify-content-between align-items-center">
+                    <div class="card-content">
+                        <div class="row-details">
                             <div class="flex flex-column gap-1">
-                                <span class="date text-xs text-color-secondary"><i class="pi pi-calendar"></i> Cr: {{
-                                    ticket.createdAt }}</span>
-                                <span class="date text-xs text-color-secondary" *ngIf="ticket.dueDate"><i
-                                        class="pi pi-clock"></i> Vc: {{ ticket.dueDate }}</span>
+                                <span class="date"><i class="pi pi-calendar"></i> Creado: {{ ticket.createdAt }}</span>
+                                <span class="date" *ngIf="ticket.dueDate"><i class="pi pi-clock"></i> Límite: {{
+                                    ticket.dueDate }}</span>
                             </div>
                             <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
                                 [title]="ticket.assignee"></p-avatar>
@@ -117,21 +115,20 @@
                 <p-card *ngFor="let ticket of hecho" cdkDrag class="kanban-card cursor-pointer"
                     (click)="openTicket(ticket)">
                     <ng-template pTemplate="header">
-                        <div class="card-header pt-3 px-3">
-                            <b class="text-sm font-semibold">{{ ticket.title }}</b>
+                        <div class="card-header">
+                            <div class="flex align-items-center gap-2">
+                                <b class="text-sm font-semibold">{{ ticket.title }}</b>
+
+                            </div>
                             <p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                         </div>
                     </ng-template>
-                    <div class="card-content px-3 pb-3">
-                        <small class="text-color-secondary block mb-2">ID: {{ ticket.id }}</small>
-                        <p-tag *ngIf="ticket.llmModel" [value]="ticket.llmModel" icon="pi pi-sparkles"
-                            styleClass="custom-llm-tag text-xs mb-2"></p-tag>
-                        <div class="row-details flex justify-content-between align-items-center">
+                    <div class="card-content">
+                        <div class="row-details">
                             <div class="flex flex-column gap-1">
-                                <span class="date text-xs text-color-secondary"><i class="pi pi-calendar"></i> Cr: {{
-                                    ticket.createdAt }}</span>
-                                <span class="date text-xs text-color-secondary" *ngIf="ticket.dueDate"><i
-                                        class="pi pi-clock"></i> Vc: {{ ticket.dueDate }}</span>
+                                <span class="date"><i class="pi pi-calendar"></i> Creado: {{ ticket.createdAt }}</span>
+                                <span class="date" *ngIf="ticket.dueDate"><i class="pi pi-clock"></i> Límite: {{
+                                    ticket.dueDate }}</span>
                             </div>
                             <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
                                 [title]="ticket.assignee"></p-avatar>
@@ -143,55 +140,64 @@
 
     </div>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     <!-- Modal Editar Ticket -->
     <p-dialog [(visible)]="editDialogVisible" [modal]="true" [style]="{ width: '550px' }" header="Detalles del Ticket"
         [draggable]="false" [resizable]="false" contentStyleClass="p-4">
 
-        <div class="flex flex-column gap-4 py-2" *ngIf="selectedTicket">
-            <div class="flex flex-column gap-3">
-                <label for="title" class="font-semibold text-color">Título</label>
-                <input pInputText id="title" [(ngModel)]="editingTicket.title" class="w-full p-2" />
+        <div class="flex flex-column gap-4" *ngIf="selectedTicket">
+            <div class="flex flex-column gap-2">
+                <label for="title">Título</label>
+                <input pInputText id="title" [(ngModel)]="editingTicket.title" class="w-full" />
             </div>
 
-            <div class="flex flex-column gap-3">
-                <label for="description" class="font-semibold text-color">Descripción</label>
+            <div class="flex flex-column gap-2">
+                <label for="description">Descripción</label>
                 <textarea pTextarea id="description" [(ngModel)]="editingTicket.description" rows="4"
-                    class="w-full p-2"></textarea>
+                    class="w-full"></textarea>
             </div>
 
             <div class="flex gap-4">
-                <div class="flex-1 flex flex-column gap-3">
-                    <label for="state" class="font-semibold text-color">Estado</label>
+                <div class="flex-1 flex flex-column gap-2">
+                    <label for="state">Estado</label>
                     <p-select [options]="stateOptions" [(ngModel)]="editingTicket.state" optionLabel="label"
                         optionValue="value" appendTo="body" styleClass="w-full"></p-select>
                 </div>
-                <div class="flex-1 flex flex-column gap-3">
-                    <label for="priority" class="font-semibold text-color">Prioridad</label>
+                <br>
+                <div class="flex-1 flex flex-column gap-2">
+                    <label for="priority">Prioridad</label>
                     <p-select [options]="priorityOptions" [(ngModel)]="editingTicket.priority" optionLabel="label"
                         optionValue="value" appendTo="body" styleClass="w-full"></p-select>
                 </div>
             </div>
 
             <div class="flex gap-4">
-                <div class="flex-1 flex flex-column gap-3">
-                    <label for="assignee" class="font-semibold text-color">Asignado a</label>
-                    <input pInputText id="assignee" [(ngModel)]="editingTicket.assignee" class="w-full p-2" />
+                <div class="flex-1 flex flex-column gap-2">
+                    <label for="assignee">Asignado a</label>
+                    <input pInputText id="assignee" [(ngModel)]="editingTicket.assignee" class="w-full" />
                 </div>
-                <div class="flex-1 flex flex-column gap-3">
-                    <label for="dueDate" class="font-semibold text-color">Fecha Límite</label>
-                    <input pInputText type="date" id="dueDate" [(ngModel)]="editingTicket.dueDate" class="w-full p-2" />
+
+                <br>
+                <div class="flex-1 flex flex-column gap-2">
+                    <label for="dueDate">Fecha Límite</label>
+                    <input pInputText type="date" id="dueDate" [(ngModel)]="editingTicket.dueDate" class="w-full" />
                 </div>
-            </div>
-
-            <div class="flex flex-column gap-3 mt-3">
-                <label for="llmModel" class="font-semibold text-color">
-                    Modelo LLM <span class="text-color-secondary font-normal">(Opcional)</span>
-                </label>
-                <span class="p-input-icon-left w-full">
-
-                    <input pInputText id="llmModel" [(ngModel)]="editingTicket.llmModel"
-                        placeholder="ej. gpt-4, claude-3" class="w-full pl-5 p-2" />
-                </span>
             </div>
         </div>
 
