@@ -11,6 +11,8 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 import { AuthService } from '../../../services/auth.service';
 
@@ -57,7 +59,9 @@ export interface Ticket {
     DialogModule,
     InputTextModule,
     TextareaModule,
-    SelectModule
+    SelectModule,
+    TableModule,
+    SelectButtonModule
   ],
   templateUrl: './tickets.html',
   styleUrls: ['./tickets.css'],
@@ -115,6 +119,12 @@ export class Tickets {
     { label: 'Baja', value: 'Baja' },
     { label: 'Muy Baja', value: 'Muy Baja' }
   ];
+
+  viewModeOptions = [
+    { label: 'Tablero', value: 'kanban', icon: 'pi pi-objects-column' },
+    { label: 'Lista', value: 'list', icon: 'pi pi-list' }
+  ];
+  viewMode: 'kanban' | 'list' = 'kanban';
 
   editDialogVisible = false;
   selectedTicket: Ticket | null = null;

@@ -2,12 +2,21 @@
     <header class="head mb-5 flex flex-column md:flex-row justify-content-between md:align-items-center gap-4">
         <div>
             <h1>Tablero de Tickets</h1>
-            <p>Gestiona el estado de tus tickets arrastrándolos entre las columnas.</p>
+            <p>Gestiona el estado de tus tickets arrastrándolos entre las columnas o en modo lista.</p>
         </div>
-        <p-button label="Crear ticket" icon="pi pi-plus" styleClass="mt-2 md:mt-0"></p-button>
+        <div class="flex gap-2 align-items-center mt-2 md:mt-0">
+            <p-selectButton [options]="viewModeOptions" [(ngModel)]="viewMode" optionLabel="label" optionValue="value"
+                class="mr-3">
+                <ng-template let-item pTemplate>
+                    <i [class]="item.icon" class="mr-2"></i>
+                    <span>{{ item.label }}</span>
+                </ng-template>
+            </p-selectButton>
+            <p-button label="Crear ticket" icon="pi pi-plus"></p-button>
+        </div>
     </header>
 
-    <div class="kanban-board">
+    <div class="kanban-board" *ngIf="viewMode === 'kanban'">
 
         <!-- Columna Pendiente -->
         <div class="kanban-column">
@@ -138,6 +147,48 @@
             </div>
         </div>
 
+    </div>
+
+    <!-- Modo Lista -->
+    <div class="list-view-container mt-4" *ngIf="viewMode === 'list'">
+        <p-table [value]="tickets" [rows]="10" [paginator]="true" styleClass="p-datatable-sm" responsiveLayout="scroll"
+            [rowHover]="true" selectionMode="single" [(selection)]="selectedTicket" dataKey="id"
+            (onRowSelect)="openTicket($any($event.data))" class="cursor-pointer">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th pSortableColumn="id">ID <p-sortIcon field="id"></p-sortIcon></th>
+                    <th pSortableColumn="title">Título <p-sortIcon field="title"></p-sortIcon></th>
+                    <th pSortableColumn="state">Estado <p-sortIcon field="state"></p-sortIcon></th>
+                    <th pSortableColumn="priority">Prioridad <p-sortIcon field="priority"></p-sortIcon></th>
+                    <th pSortableColumn="assignee">Asignado a <p-sortIcon field="assignee"></p-sortIcon></th>
+                    <th pSortableColumn="dueDate">Límite <p-sortIcon field="dueDate"></p-sortIcon></th>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-ticket>
+                <tr [pSelectableRow]="ticket">
+                    <td><b>{{ticket.id}}</b></td>
+                    <td>{{ticket.title}}</td>
+                    <td>
+                        <p-tag [value]="ticket.state" severity="info"></p-tag>
+                    </td>
+                    <td>
+                        <p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
+                    </td>
+                    <td>
+                        <div class="flex align-items-center gap-2">
+                            <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"></p-avatar>
+                            <span>{{ticket.assignee}}</span>
+                        </div>
+                    </td>
+                    <td>{{ticket.dueDate || 'Sin límite'}}</td>
+                </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="6" class="text-center p-4 text-color-secondary">No hay tickets.</td>
+                </tr>
+            </ng-template>
+        </p-table>
     </div>
 
 

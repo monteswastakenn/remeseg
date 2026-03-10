@@ -11,6 +11,8 @@ import { AvatarModule } from 'primeng/avatar';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
+import { TableModule } from 'primeng/table';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 import { AuthService } from '../../../../services/auth.service';
 
@@ -63,7 +65,9 @@ interface TicketItem {
     AvatarModule,
     DialogModule,
     InputTextModule,
-    TextareaModule
+    TextareaModule,
+    TableModule,
+    SelectButtonModule
   ],
   templateUrl: './group-tickets.html',
   styleUrls: ['./group-tickets.css'],
@@ -113,9 +117,15 @@ export class GroupTickets implements OnInit {
     { label: 'Media Alta', value: 'Media Alta' },
     { label: 'Media', value: 'Media' },
     { label: 'Media Baja', value: 'Media Baja' },
-    { label: 'Baja', value: 'Baja' },
-    { label: 'Muy Baja', value: 'Muy Baja' }
+    { label: 'Baja (Baja)', value: 'Baja (Baja)' },
+    { label: 'Muy Baja (Muy Baja)', value: 'Muy Baja (Muy Baja)' }
   ];
+
+  viewModeOptions = [
+    { label: 'Tablero', value: 'kanban', icon: 'pi pi-objects-column' },
+    { label: 'Lista', value: 'list', icon: 'pi pi-list' }
+  ];
+  viewMode: 'kanban' | 'list' = 'kanban';
 
   editDialogVisible = false;
   selectedTicket: TicketItem | null = null;
