@@ -27,7 +27,7 @@ export const routes: Routes = [
             { path: 'dashboard', component: Dashboard },
             { path: 'tickets', component: Tickets, canActivate: [authGuard], data: { permission: 'ticket:view' } },
             { path: 'users', component: Users, canActivate: [authGuard], data: { permission: 'user:view' } },
-            { path: 'admin-users', component: AdminUsers, canActivate: [authGuard] },
+            { path: 'admin-users', component: AdminUsers, canActivate: [authGuard], data: { permission: 'users:view' } },
             { path: 'groups', component: Groups, canActivate: [authGuard], data: { permission: 'group:view' } },
             { path: 'group-tickets', component: GroupTickets, canActivate: [authGuard], data: { permission: 'group:view' } },
         ],

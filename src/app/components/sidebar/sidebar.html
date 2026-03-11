@@ -24,7 +24,7 @@
         </a>
 
         <!-- 3. Admin Users (Super Admin only for now, though logic can be tailored) -->
-        <a *ngIf="canView('user:view') || canView('users:view')" routerLink="/home/admin-users" routerLinkActive="active"
+        <a *ngIf="canView('users:view')" routerLink="/home/admin-users" routerLinkActive="active"
             class="item">
             <i class="pi pi-users"></i>
             <span class="label" *ngIf="!collapsed">Gestión Usuarios</span>
