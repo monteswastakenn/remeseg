@@ -146,4 +146,19 @@ export class ApiGatewayService {
 
     return this.respond(200, this.opCode('Sx', resource, 200), null);
   }
+
+  /**
+   * Health Check API (Tipo GET)
+   * Verifica la conectividad o estado del servicio.
+   */
+  async health(): Promise<ApiResponse<string>> {
+    // Realizamos un ping sencillo a Supabase para comprobar conexión
+    const { error } = await this.sb.client.auth.getSession();
+
+    if (error) {
+      return this.respond(503, this.opCode('Sx', 'he', 503), 'Service Unavailable');
+    }
+
+    return this.respond(200, this.opCode('Sx', 'he', 200), 'OK');
+  }
 }
