@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -13,195 +13,156 @@ import { ToolbarModule } from 'primeng/toolbar';
 import { PanelModule } from 'primeng/panel';
 import { ToastModule } from 'primeng/toast';
 import { DialogModule } from 'primeng/dialog';
+import { SkeletonModule } from 'primeng/skeleton';
 
 import { MessageService } from 'primeng/api';
 
 type TagSeverity = 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined;
-
-import { AuthService } from '../../../services/auth.service';
-
-type Role = 'admin' | 'user';
 type Status = 'Activo' | 'Pausado' | 'Inactivo';
 
-export interface UserTicket {
-  id: string;
-  title: string;
-  description: string;
-  state: 'Pendiente' | 'En progreso' | 'Revisión' | 'Hecho' | 'Bloqueado';
-  priority: string;
-  assignee: string;
-  dueDate: string;
-}
+import { AuthService, AppUser } from '../../../services/auth.service';
+import { PermissionService } from '../../../services/permission.service';
+import { TicketService, TicketItem } from '../../../services/ticket.service';
+import { HasPermissionDirective } from '../../../directives/has-permission/has-permission.directive';
 
 @Component({
   selector: 'app-users',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-
-    CardModule,
-    AvatarModule,
-    DividerModule,
-    ButtonModule,
-    InputTextModule,
-    TableModule,
-    TagModule,
-    ToolbarModule,
-    PanelModule,
-    ToastModule,
-    DialogModule
+    CommonModule, FormsModule,
+    CardModule, AvatarModule, DividerModule, ButtonModule, InputTextModule,
+    TableModule, TagModule, ToolbarModule, PanelModule, ToastModule, DialogModule,
+    SkeletonModule, HasPermissionDirective,
   ],
   providers: [MessageService],
   templateUrl: './users.html',
   styleUrls: ['./users.css']
 })
-export class Users {
+export class Users implements OnInit {
+  private auth      = inject(AuthService);
+  private msg       = inject(MessageService);
+  private permSvc   = inject(PermissionService);
+  private ticketSvc = inject(TicketService);
 
-  private auth = inject(AuthService);
-  private msg = inject(MessageService);
-
-  currentUser = this.getUserSafe();
+  // ── Estado reactivo ─────────────────────────────────────────────────────────
+  loading = signal(true);
+  currentUser = signal<AppUser | null>(null);
 
   q = '';
 
+  // Tickets asignados cargados de Supabase
+  assignedTickets = signal<TicketItem[]>([]);
+
+  // ── Diálogo de edición ──────────────────────────────────────────────────────
   editDialogVisible = false;
-  editingUser: any = {};
+  editingUser: { fullName: string; puesto: string } = { fullName: '', puesto: '' };
 
-  openEdit() {
-    this.editingUser = { ...this.currentUser };
-    this.editDialogVisible = true;
+  // ── Lifecycle ───────────────────────────────────────────────────────────────
+  async ngOnInit() {
+    // Esperar hidratación del usuario
+    let retries = 0;
+    while (!this.auth.currentUser()?.id && retries < 20) {
+      await new Promise(r => setTimeout(r, 150));
+      retries++;
+    }
+
+    const user = this.auth.currentUser();
+    this.currentUser.set(user);
+
+    if (user?.groupId) {
+      await this.loadMyTickets(user);
+    }
+
+    this.loading.set(false);
   }
 
-  saveEdit() {
-    this.currentUser = { ...this.currentUser, ...this.editingUser };
-    this.editDialogVisible = false;
-    this.msg.add({ severity: 'success', summary: 'Actualizado', detail: 'Datos del usuario guardados' });
+  // ── Cargar tickets asignados al usuario ────────────────────────────────────
+  private async loadMyTickets(user: AppUser) {
+    if (!user.groupId) return;
+
+    const res = await this.ticketSvc.getTicketsByGroup(user.groupId);
+    if (res.statusCode === 200 && res.data) {
+      const mine = res.data.filter(t => t.assignee === user.id);
+      this.assignedTickets.set(mine);
+    }
   }
 
-  deactivateUser() {
-    this.currentUser.status = 'Inactivo';
-    this.msg.add({ severity: 'warn', summary: 'Usuario dado de baja', detail: 'El usuario ha sido desactivado exitosamente' });
+  // ── Permisos del usuario como tabla ────────────────────────────────────────
+  get permissions() {
+    const user = this.currentUser();
+    if (!user?.permissions) return [];
+    return user.permissions.map(p => {
+      let module = 'General';
+      if (p.startsWith('group')) module = 'Groups';
+      if (p.startsWith('ticket')) module = 'Ticket';
+      if (p.startsWith('user')) module = 'Users';
+      return { module, name: p, status: 'Activo' as Status };
+    });
   }
 
-  activity = [
-    { action: 'Inicio de sesión', date: 'Hoy', status: 'OK' },
-    { action: 'Accedió a Users', date: 'Hoy', status: 'OK' },
-    { action: 'Accedió a Groups', date: 'Hoy', status: 'OK' },
-    { action: 'Cambió vista', date: 'Hoy', status: 'OK' }
-  ];
-
-  permissions = this.currentUser.permissions.map(p => {
-    let module = 'General';
-    if (p.startsWith('group')) module = 'Groups';
-    if (p.startsWith('ticket')) module = 'Ticket';
-    if (p.startsWith('user')) module = 'Users';
-    return {
-      module,
-      name: p,
-      role: this.currentUser.role,
-      status: 'Activo' as Status
-    };
-  });
-
-  // Signal computed
   filteredPermissions = computed(() => {
     const s = this.q.trim().toLowerCase();
     if (!s) return this.permissions;
-    return this.permissions.filter(p => p.name.toLowerCase().includes(s) || p.module?.toLowerCase().includes(s));
+    return this.permissions.filter(p =>
+      p.name.toLowerCase().includes(s) || p.module?.toLowerCase().includes(s)
+    );
   });
 
-  roleSeverity(role: Role): TagSeverity {
-    return role === 'admin' ? 'info' : 'warn';
+  // ── Editar perfil ─────────────────────────────────────────────────────────
+  openEdit() {
+    const user = this.currentUser();
+    this.editingUser = {
+      fullName: user?.fullName ?? '',
+      puesto: user?.puesto ?? '',
+    };
+    this.editDialogVisible = true;
   }
 
+  async saveEdit() {
+    const user = this.currentUser();
+    if (!user) return;
+
+    const res = await this.auth.updateUser(user.id, {
+      full_name: this.editingUser.fullName.trim(),
+      puesto: this.editingUser.puesto.trim() || null,
+    });
+
+    if (res.statusCode === 200) {
+      // Actualizar signal local
+      this.currentUser.set({
+        ...user,
+        fullName: this.editingUser.fullName,
+        puesto: this.editingUser.puesto || undefined,
+      });
+      this.editDialogVisible = false;
+      this.msg.add({ severity: 'success', summary: 'Actualizado', detail: 'Perfil guardado correctamente.', life: 2500 });
+    } else {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el perfil.', life: 3000 });
+    }
+  }
+
+  // ── Stats derivadas ───────────────────────────────────────────────────────
+  get totalTickets()    { return this.assignedTickets().length; }
+  get pendingTickets()  { return this.assignedTickets().filter(t => t.state === 'Pendiente').length; }
+  get progressTickets() { return this.assignedTickets().filter(t => t.state === 'En progreso').length; }
+  get doneTickets()     { return this.assignedTickets().filter(t => t.state === 'Hecho').length; }
+  get blockedTickets()  { return this.assignedTickets().filter(t => t.state === 'Bloqueado').length; }
+
+  // ── Helpers UI ────────────────────────────────────────────────────────────
   statusSeverity(status: Status): TagSeverity {
     if (status === 'Activo') return 'success';
     if (status === 'Pausado') return 'warn';
     return 'danger';
   }
 
-  showToast() {
-    this.msg.add({
-      severity: 'success',
-      summary: 'Perfil cargado',
-      detail: 'Usuario cargado correctamente'
-    });
-  }
-
-  private getUserSafe() {
-    const u = this.auth.currentUser();
-
-    const email = u?.email || 'pansotic29@gmail.com';
-
-    return {
-      username: u?.username || 'Panso',
-      fullName: u?.fullName || 'Panso TIC',
-      email,
-      phone: u?.phone || '4420000000',
-      address: 'Querétaro, México', // Assuming address and birthDate are static or not in auth user for now
-      birthDate: '1990-01-01',
-      role: (u?.role || 'admin') as Role,
-      status: 'Activo' as Status,
-      permissions: u?.permissions || [
-        'group:view', 'group:edit', 'group:add', 'group:delete',
-        'ticket:view', 'ticket:edit', 'ticket:add', 'ticket:delete', 'ticket:edit_state',
-        'user:view', 'users:view', 'user:edit', 'user:add', 'user:delete'
-      ]
-    };
-  }
-
-  // --- MOCK TICKETS ---
-  assignedTickets: UserTicket[] = [
-    {
-      id: 'TK-1001',
-      title: 'Actualizar dependencias del proyecto',
-      description: 'Llevar Angular a la última versión',
-      state: 'Pendiente',
-      priority: 'Alta (Alta)',
-      assignee: 'Panso TIC',
-      dueDate: '2026-03-15'
-    },
-    {
-      id: 'TK-1002',
-      title: 'Corregir error de login',
-      description: 'El token expira muy rápido',
-      state: 'En progreso',
-      priority: 'Urgente (Urgente)',
-      assignee: 'Panso TIC',
-      dueDate: '2026-03-11'
-    },
-    {
-      id: 'TK-1003',
-      title: 'Rediseñar vista de usuarios',
-      description: 'Añadir la sección de tickets asignados',
-      state: 'Hecho',
-      priority: 'Media (Media)',
-      assignee: 'Panso TIC',
-      dueDate: '2026-03-10'
-    },
-    {
-      id: 'TK-1004',
-      title: 'Validar permisos en API',
-      description: 'Revisar endpoints',
-      state: 'Pendiente',
-      priority: 'Baja (Baja)',
-      assignee: 'Panso TIC',
-      dueDate: '2026-03-20'
-    }
-  ];
-
-  // --- COMPUTED SUMMARIES ---
-  get totalTickets() { return this.assignedTickets.length; }
-  get pendingTickets() { return this.assignedTickets.filter(t => t.state === 'Pendiente').length; }
-  get progressTickets() { return this.assignedTickets.filter(t => t.state === 'En progreso').length; }
-  get doneTickets() { return this.assignedTickets.filter(t => t.state === 'Hecho').length; }
-  get blockedTickets() { return this.assignedTickets.filter(t => t.state === 'Bloqueado').length; }
-
   getPrioritySeverity(priority: string): TagSeverity {
     if (priority.includes('Urgente')) return 'danger';
     if (priority.includes('Alta')) return 'warn';
     if (priority.includes('Baja')) return 'info';
     return 'success';
+  }
+
+  hasPermission(perm: string): boolean {
+    return this.permSvc.hasPermission(perm);
   }
 }

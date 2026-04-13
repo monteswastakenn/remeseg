@@ -1,139 +1,270 @@
-<div class="page">
-    <header class="head mb-4 flex flex-column md:flex-row justify-content-between md:align-items-center gap-4">
+<p-toast></p-toast>
+<p-confirmDialog></p-confirmDialog>
+
+<div class="page-container">
+
+    <!-- ── Header ─────────────────────────────────────────────────────────────── -->
+    <header class="page-header">
         <div>
-            <h1>Gestión de Usuarios (Super Admin)</h1>
-            <p>Control total de cuentas y niveles de acceso a nivel global.</p>
+            <h2>Gestión de Usuarios</h2>
+            <p>Administra puestos, grupos y permisos de cada usuario del sistema.</p>
         </div>
-        <br>
-        <p-button label="Nuevo Usuario" icon="pi pi-user-plus" (onClick)="openCreateUser()"></p-button>
+        <div class="header-actions">
+            <span class="p-input-icon-left search-wrap">
+                <i class="pi pi-search"></i>
+                <input pInputText
+                    [(ngModel)]="searchQuery"
+                    placeholder="Buscar por nombre, email, puesto o grupo..."
+                    class="search-input" />
+            </span>
+            <p-button icon="pi pi-refresh" [text]="true" [rounded]="true"
+                pTooltip="Recargar" (onClick)="loadData()">
+            </p-button>
+        </div>
     </header>
 
-    <div class="card bg-white p-4 border-round-xl shadow-1">
-        <p-table [value]="usersList" [paginator]="true" [rows]="10" responsiveLayout="scroll" [rowHover]="true"
-            styleClass="p-datatable-sm">
+    <!-- ── Skeleton ───────────────────────────────────────────────────────────── -->
+    @if (loading()) {
+        <div class="skeleton-list">
+            <p-skeleton height="52px" borderRadius="8px"></p-skeleton>
+            <p-skeleton height="52px" borderRadius="8px"></p-skeleton>
+            <p-skeleton height="52px" borderRadius="8px"></p-skeleton>
+            <p-skeleton height="52px" borderRadius="8px"></p-skeleton>
+        </div>
+    } @else {
+
+    <!-- ── Tabla de Usuarios ──────────────────────────────────────────────────── -->
+    <div class="card-table">
+        <p-table [value]="filteredUsers()" [paginator]="true" [rows]="10"
+            responsiveLayout="scroll" [rowHover]="true" styleClass="p-datatable-sm">
+
             <ng-template pTemplate="header">
                 <tr>
-                    <th pSortableColumn="data.username">Usuario <p-sortIcon field="data.username"></p-sortIcon></th>
+                    <th pSortableColumn="full_name">Nombre <p-sortIcon field="full_name"></p-sortIcon></th>
                     <th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th>
-                    <th pSortableColumn="data.role">Rol Primario <p-sortIcon field="data.role"></p-sortIcon></th>
-                    <th>Permisos Asignados</th>
-                    <th class="text-right">Acciones</th>
+                    <th pSortableColumn="puesto">Puesto <p-sortIcon field="puesto"></p-sortIcon></th>
+                    <th>Grupo</th>
+                    <th>Permisos</th>
+                    <th class="col-actions">Acciones</th>
                 </tr>
             </ng-template>
+
             <ng-template pTemplate="body" let-user>
                 <tr>
-                    <td><b>{{user.data.username}}</b></td>
-                    <td>{{user.email}}</td>
+                    <!-- Nombre con avatar -->
                     <td>
-                        <p-tag [value]="user.data.role" [severity]="getSeverity(user.data.role)"></p-tag>
+                        <div class="user-cell">
+                            <div class="user-avatar">{{ user.full_name.charAt(0).toUpperCase() }}</div>
+                            <div>
+                                <div class="user-name">{{ user.full_name }}</div>
+                                <div class="user-email-small">{{ user.email }}</div>
+                            </div>
+                        </div>
                     </td>
+
+                    <!-- Email -->
+                    <td><span class="email-cell">{{ user.email }}</span></td>
+
+                    <!-- Puesto -->
                     <td>
-                        <span class="text-xs text-color-secondary" *ngIf="user.data.role === 'superAdmin'">
-                            <i class="pi pi-star-fill text-yellow-500 mr-1"></i> Acceso Irrestricto
-                        </span>
-                        <span class="text-xs text-color-secondary" *ngIf="user.data.role !== 'superAdmin'">
-                            {{ user.data.permissions?.length || 0 }} permisos otorgados
-                        </span>
+                        @if (user.puesto) {
+                            <span class="puesto-tag">{{ user.puesto }}</span>
+                        } @else {
+                            <span class="no-data">— Sin puesto —</span>
+                        }
                     </td>
-                    <td class="text-right flex gap-2 justify-content-end">
-                        <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" (onClick)="editUser(user)"
-                            pTooltip="Editar usuario y permisos" tooltipPosition="left"></p-button>
+
+                    <!-- Grupo -->
+                    <td>
+                        @if (user.group_id) {
+                            <p-tag [value]="getGroupName(user.group_id)" severity="info" [rounded]="true"></p-tag>
+                        } @else {
+                            <span class="no-data">— Sin grupo —</span>
+                        }
+                    </td>
+
+                    <!-- Permisos -->
+                    <td>
+                        @if (user.group_id) {
+                            <p-button icon="pi pi-shield" label="Ver permisos" size="small"
+                                [text]="true" severity="info"
+                                (onClick)="openPermissions(user)"></p-button>
+                        } @else {
+                            <span class="perm-none">Sin permisos</span>
+                        }
+                    </td>
+
+                    <!-- Acciones -->
+                    <td class="col-actions">
+                        <p-button icon="pi pi-user-edit" [rounded]="true" [text]="true"
+                            pTooltip="Editar usuario" tooltipPosition="left"
+                            (onClick)="openEdit(user)">
+                        </p-button>
+                        <p-button icon="pi pi-shield" [rounded]="true" [text]="true" severity="info"
+                            pTooltip="Editar permisos" tooltipPosition="left"
+                            (onClick)="openPermissions(user)"
+                            [disabled]="!user.group_id">
+                        </p-button>
                         <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
-                            (onClick)="confirmDeleteOrDelete(user, $event)" pTooltip="Eliminar usuario"
-                            tooltipPosition="left" [disabled]="user.data.role === 'superAdmin'"></p-button>
+                            pTooltip="Eliminar usuario" tooltipPosition="left"
+                            (onClick)="confirmDelete(user, $event)">
+                        </p-button>
                     </td>
                 </tr>
             </ng-template>
+
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="5" class="text-center p-4 text-color-secondary">No hay usuarios en el sistema.</td>
+                    <td colspan="6" class="empty-row">No se encontraron usuarios.</td>
                 </tr>
             </ng-template>
         </p-table>
     </div>
 
-    <!-- Modal para Crear / Editar Usuario -->
-    <p-dialog [(visible)]="editDialogVisible" class="user-dialog" [modal]="true"
-        [header]="isNewUser ? 'Crear Nuevo Usuario' : 'Gestionar Perfil y Permisos'"
-        [style]="{ width: '700px', maxWidth: '95vw' }" [draggable]="false" [resizable]="false">
-
-        <div class="flex flex-column gap-4 mt-3" *ngIf="editingUser">
-
-            <!-- Fila 1: Nombres y Correo -->
-            <div class="flex flex-column md:flex-row gap-4">
-                <div class="flex-1 flex flex-column gap-2">
-                    <label for="fname" class="text-sm font-semibold text-color-secondary">Nombre Completo <span
-                            class="text-red-500">*</span></label>
-                    <input pInputText id="fname" class="w-full p-3 border-round-md" [(ngModel)]="editingUser.fullName"
-                        autofocus placeholder="Ej. Juan Pérez" />
-                </div>
-
-                <br>
-                <div class="flex-1 flex flex-column gap-2">
-                    <label for="mail" class="text-sm font-semibold text-color-secondary">Correo Electrónico <span
-                            class="text-red-500">*</span></label>
-                    <input pInputText type="email" id="mail" class="w-full p-3 border-round-md"
-                        [(ngModel)]="editingUser.email" [disabled]="!isNewUser" placeholder="usuario@empresa.com" />
-                </div>
-            </div>
-
-            <br>
-
-            <!-- Fila 2: UserName, Password, Telefono -->
-            <div class="flex flex-column md:flex-row gap-4">
-                <div class="flex-1 flex flex-column gap-2">
-                    <label for="uname" class="text-sm font-semibold text-color-secondary">Usuario</label>
-                    <input pInputText id="uname" class="w-full p-3 border-round-md" [(ngModel)]="editingUser.username"
-                        placeholder="Alias (opcional)" />
-                </div>
-
-                <br>
-                <div class="flex-1 flex flex-column gap-2">
-                    <label for="pwd" class="text-sm font-semibold text-color-secondary">Contraseña <span
-                            class="text-red-500">*</span></label>
-                    <input pInputText id="pwd" class="w-full p-3 border-round-md" [(ngModel)]="editingUser.pass"
-                        placeholder="Mín. 8 caracteres" />
-                </div>
-
-                <br>
-                <div class="flex-1 flex flex-column gap-2">
-                    <label for="tel" class="text-sm font-semibold text-color-secondary">Teléfono</label>
-                    <input pInputText id="tel" class="w-full p-3 border-round-md" [(ngModel)]="editingUser.phone"
-                        placeholder="A 10 dígitos" />
-                </div>
-            </div>
-
-            <br>
-
-            <!-- Fila 3: Rol Primario -->
-            <div class="flex flex-column gap-2 pt-4 border-top-1 surface-border">
-                <label for="role" class="text-lg font-bold m-0 text-color">Nivel de Acceso y Funciones</label>
-                <p class="text-sm text-color-secondary mt-0 mb-3">Asigna el rol "Super Admin" para control irrestricto,
-                    o roles menores para conceder accesos específicos.</p>
-                <p-select [options]="roleOptions" [(ngModel)]="editingUser.role" optionLabel="label" optionValue="value"
-                    appendTo="body" styleClass="w-full" class="w-full"></p-select>
-            </div>
-
-            <br>
-            <!-- Fila 4: Permisos Multi-Select -->
-            <div class="flex flex-column gap-3 surface-ground border-1 surface-border p-4 border-round-xl mt-2"
-                *ngIf="editingUser.role !== 'superAdmin'">
-                <label for="perms" class="font-semibold text-color">Selección de Permisos Múltiples</label><br>
-                <p-multiSelect [options]="availablePermissions" [(ngModel)]="editingUser.permissions"
-                    defaultLabel="Haz clic para seleccionar..." optionLabel="label" optionValue="value" display="chip"
-                    [filter]="false" appendTo="body" styleClass="w-full p-inputtext-lg" class="w-full"></p-multiSelect>
-            </div>
-
-        </div>
-
-        <ng-template pTemplate="footer">
-            <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
-                (onClick)="editDialogVisible = false"></p-button>
-            <p-button label="Guardar Configuración" icon="pi pi-check" (onClick)="saveUser()"
-                [disabled]="!editingUser?.email || !editingUser?.pass || !editingUser?.fullName"></p-button>
-        </ng-template>
-    </p-dialog>
+    }
 </div>
 
-<!-- Diálogo de confirmación invisible -->
-<p-confirmDialog></p-confirmDialog>
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<!-- Modal 1: Editar Información del Usuario                                    -->
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<p-dialog [(visible)]="editDialogVisible" [modal]="true"
+    header="Editar Usuario"
+    [style]="{ width: '560px' }" [draggable]="false"
+    [contentStyle]="{ overflow: 'visible' }">
+
+    @if (editingUser) {
+    <div class="edit-dialog-body">
+
+        <!-- Banner de identidad -->
+        <div class="user-identity-banner">
+            <div class="identity-avatar">{{ editingUser.full_name.charAt(0).toUpperCase() }}</div>
+            <div>
+                <strong>{{ editingUser.full_name }}</strong>
+                <span>{{ editingUser.email }}</span>
+            </div>
+        </div>
+
+        <p-divider></p-divider>
+
+        <!-- Info personal -->
+        <h4 class="section-title"><i class="pi pi-id-card"></i> Información Personal</h4>
+        <div class="form-grid">
+            <div class="field">
+                <label class="field-label">Nombre completo</label>
+                <input pInputText [(ngModel)]="form.full_name" class="w-full"
+                    placeholder="Nombre completo del usuario" />
+            </div>
+            <div class="field">
+                <label class="field-label">Puesto / Cargo</label>
+                <input pInputText [(ngModel)]="form.puesto" class="w-full"
+                    placeholder="Ej: Desarrollador Senior, QA Engineer..." />
+            </div>
+        </div>
+
+        <p-divider></p-divider>
+
+        <!-- Grupo -->
+        <h4 class="section-title"><i class="pi pi-sitemap"></i> Grupo Asignado</h4>
+        <div class="field">
+            <p-select
+                [options]="groupOptions()"
+                [(ngModel)]="form.group_id"
+                optionLabel="label"
+                optionValue="value"
+                placeholder="Selecciona un grupo"
+                styleClass="w-full"
+                appendTo="body">
+            </p-select>
+            <small class="field-hint">El grupo determina los permisos del usuario.</small>
+        </div>
+    </div>
+    }
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+            (onClick)="editDialogVisible = false"></p-button>
+        <p-button label="Guardar cambios" icon="pi pi-check"
+            [loading]="saving()"
+            (onClick)="saveUser()"></p-button>
+    </ng-template>
+</p-dialog>
+
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<!-- Modal 2: Editar Permisos del Grupo                                         -->
+<!-- ════════════════════════════════════════════════════════════════════════════ -->
+<p-dialog [(visible)]="permDialogVisible" [modal]="true"
+    [header]="'Permisos: ' + permDialogGroupName"
+    [style]="{ width: '620px' }" [draggable]="false">
+
+    @if (permDialogUser) {
+    <div class="perm-dialog-body">
+        <div class="perm-dialog-info">
+            <i class="pi pi-info-circle"></i>
+            <span>
+                Editando permisos del grupo <strong>{{ permDialogGroupName }}</strong>.
+                Los cambios afectan a <strong>todos los usuarios</strong> de este grupo.
+            </span>
+        </div>
+
+        @if (loadingPerms()) {
+            <p-skeleton height="40px" styleClass="mb-2"></p-skeleton>
+            <p-skeleton height="40px" styleClass="mb-2"></p-skeleton>
+            <p-skeleton height="40px"></p-skeleton>
+        } @else if (groupPerms().length === 0) {
+            <div class="perms-empty">
+                <i class="pi pi-exclamation-triangle"></i>
+                <span>Este grupo no tiene permisos configurados.</span>
+            </div>
+        } @else {
+            <div class="perms-table-wrap">
+                <table class="perms-table">
+                    <thead>
+                        <tr>
+                            <th>Recurso</th>
+                            <th class="text-center">Ver</th>
+                            <th class="text-center">Crear</th>
+                            <th class="text-center">Editar</th>
+                            <th class="text-center">Eliminar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (perm of groupPerms(); track perm.resource) {
+                        <tr>
+                            <td class="resource-label">
+                                <i class="pi pi-shield" style="margin-right: 0.5rem; opacity:0.5;"></i>
+                                {{ perm.label }}
+                            </td>
+                            <td class="text-center">
+                                <p-toggleSwitch [(ngModel)]="perm.can_view"
+                                    (onChange)="togglePerm(perm, 'can_view')">
+                                </p-toggleSwitch>
+                            </td>
+                            <td class="text-center">
+                                <p-toggleSwitch [(ngModel)]="perm.can_create"
+                                    (onChange)="togglePerm(perm, 'can_create')">
+                                </p-toggleSwitch>
+                            </td>
+                            <td class="text-center">
+                                <p-toggleSwitch [(ngModel)]="perm.can_edit"
+                                    (onChange)="togglePerm(perm, 'can_edit')">
+                                </p-toggleSwitch>
+                            </td>
+                            <td class="text-center">
+                                <p-toggleSwitch [(ngModel)]="perm.can_delete"
+                                    (onChange)="togglePerm(perm, 'can_delete')">
+                                </p-toggleSwitch>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+    }
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" icon="pi pi-times" [text]="true" severity="secondary"
+            (onClick)="permDialogVisible = false"></p-button>
+    </ng-template>
+</p-dialog>

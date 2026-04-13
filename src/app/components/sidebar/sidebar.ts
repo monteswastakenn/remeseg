@@ -1,14 +1,24 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 
 import { ButtonModule } from 'primeng/button';
-import { AuthService, Permission } from '../../services/auth.service';
+import { TooltipModule } from 'primeng/tooltip';
+import { AuthService } from '../../services/auth.service';
+import { PermissionService } from '../../services/permission.service';
+import { HasPermissionDirective } from '../../directives/has-permission/has-permission.directive';
 
 @Component({
   selector: 'app-sidebar',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, ButtonModule],
+  imports: [
+    CommonModule,
+    RouterLink,
+    RouterLinkActive,
+    ButtonModule,
+    TooltipModule,
+    HasPermissionDirective,
+  ],
   templateUrl: './sidebar.html',
   styleUrls: ['./sidebar.css'],
 })
@@ -16,23 +26,17 @@ export class SidebarComponent {
   @Input() collapsed = false;
   @Input() onToggle?: () => void;
 
-  constructor(private auth: AuthService, private router: Router) { }
-
-  groupsMenuExpanded = false;
+  private auth    = inject(AuthService);
+  private permSvc = inject(PermissionService);
+  private router  = inject(Router);
 
   logout() {
     this.auth.logout();
-    this.router.navigateByUrl('/'); // regresa al landing
+    this.router.navigateByUrl('/');
   }
 
-  toggleGroupsMenu() {
-    this.groupsMenuExpanded = !this.groupsMenuExpanded;
-  }
-
-  canView(permission: Permission): boolean {
-    const user = this.auth.currentUser();
-    if (!user) return false;
-    if (user.role === 'admin') return true;
-    return user.permissions?.includes(permission) || false;
+  /** Shorthand for template */
+  hasPermission(perm: string): boolean {
+    return this.permSvc.hasPermission(perm);
   }
 }

@@ -6,9 +6,8 @@ import { Register } from './pages/auth/register/register';
 
 import { MainLayout } from './layout/main-layout/main-layout';
 import { Dashboard } from './pages/home/dashboard/dashboard';
-import { Tickets } from './pages/home/tickets/tickets';
 import { Users } from './pages/home/users/users';
-import { Groups } from './pages/home/groups/groups';
+import { GroupsList } from './pages/home/groups/groups-list/groups-list';
 import { GroupTickets } from './pages/home/groups/group-tickets/group-tickets';
 import { AdminUsers } from './pages/home/admin-users/admin-users';
 import { authGuard } from './guards/auth.guard';
@@ -24,12 +23,27 @@ export const routes: Routes = [
         canActivate: [authGuard],
         children: [
             { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+            // Dashboard y perfil: solo requieren autenticación (sin permiso específico)
             { path: 'dashboard', component: Dashboard },
-            { path: 'tickets', component: Tickets, canActivate: [authGuard], data: { permission: 'ticket:view' } },
-            { path: 'users', component: Users, canActivate: [authGuard], data: { permission: 'user:view' } },
-            { path: 'admin-users', component: AdminUsers, canActivate: [authGuard], data: { permission: 'users:view' } },
-            { path: 'groups', component: Groups, canActivate: [authGuard], data: { permission: 'group:view' } },
-            { path: 'group-tickets', component: GroupTickets, canActivate: [authGuard], data: { permission: 'group:view' } },
+            { path: 'users', component: Users },
+
+            // Grupos: solo requieren autenticación (la directiva appHasPermission
+            // controla qué botones son visibles dentro del componente)
+            { path: 'groups', component: GroupsList },
+
+            // Kanban de un grupo: requiere permiso ticket:view
+            {
+                path: 'groups/:groupId',
+                component: GroupTickets,
+                canActivate: [authGuard],
+                data: { permission: 'ticket:view' },
+            },
+
+            // Administración de usuarios: accesible para gestión inicial
+            {
+                path: 'admin-users',
+                component: AdminUsers,
+            },
         ],
     },
 

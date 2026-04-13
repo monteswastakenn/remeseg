@@ -1,31 +1,15 @@
 <p-toast></p-toast>
 
+<!-- Diálogo editar perfil -->
 <p-dialog header="Editar Perfil" [(visible)]="editDialogVisible" [modal]="true" [style]="{width: '400px'}">
-    <div class="flex flex-column gap-3 mt-3"
-        style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
-        <div class="flex flex-column gap-2" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label for="username">Usuario</label>
-            <input pInputText id="username" [(ngModel)]="editingUser.username" placeholder="pansotic29@gmail.com" />
-        </div>
-        <div class="flex flex-column gap-2" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label for="email">Email</label>
-            <input pInputText id="email" [(ngModel)]="editingUser.email" placeholder="correo@ejemplo.com" />
-        </div>
-        <div class="flex flex-column gap-2" style="display: flex; flex-direction: column; gap: 0.5rem;">
+    <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
             <label for="fullName">Nombre Completo</label>
             <input pInputText id="fullName" [(ngModel)]="editingUser.fullName" placeholder="Nombre Apellido" />
         </div>
-        <div class="flex flex-column gap-2" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label for="address">Dirección</label>
-            <input pInputText id="address" [(ngModel)]="editingUser.address" placeholder="Calle, número, colonia" />
-        </div>
-        <div class="flex flex-column gap-2" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label for="phone">Teléfono</label>
-            <input pInputText id="phone" [(ngModel)]="editingUser.phone" placeholder="Solo números" />
-        </div>
-        <div class="flex flex-column gap-2" style="display: flex; flex-direction: column; gap: 0.5rem;">
-            <label for="birthDate">Fecha de nacimiento</label>
-            <input pInputText id="birthDate" type="date" [(ngModel)]="editingUser.birthDate" />
+        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <label for="puesto">Puesto</label>
+            <input pInputText id="puesto" [(ngModel)]="editingUser.puesto" placeholder="Ej: Desarrollador" />
         </div>
     </div>
     <ng-template pTemplate="footer">
@@ -35,240 +19,169 @@
     </ng-template>
 </p-dialog>
 
-<div class="page">
+<div class="page-container">
 
-    <header class="head">
-        <h1>Users</h1>
-        <p>Perfil del usuario en sesión.</p>
-    </header>
+    @if (loading()) {
+        <div class="profile-hero">
+            <p-skeleton shape="circle" size="5rem"></p-skeleton>
+            <div style="flex:1">
+                <p-skeleton height="2rem" width="60%" styleClass="mb-2"></p-skeleton>
+                <p-skeleton height="1rem" width="40%"></p-skeleton>
+            </div>
+        </div>
+    } @else if (currentUser(); as user) {
 
-
-    <!-- PERFIL -->
-    <div class="grid">
-
-        <p-card class="card profile" header="Perfil">
-
-            <div class="profileTop">
-
-                <p-avatar [label]="(currentUser.username || 'U').slice(0,1).toUpperCase()" shape="circle" size="xlarge">
+        <!-- HERO: PERFIL -->
+        <div class="profile-hero">
+            <div class="hero-left">
+                <p-avatar [label]="(user.username || 'U').slice(0,1).toUpperCase()" shape="circle" size="xlarge">
                 </p-avatar>
+            </div>
 
-                <div class="meta">
-
-                    <div class="nameRow">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <h2>{{ currentUser.fullName }}</h2>
-                            <p-button *ngIf="currentUser.permissions.includes('user:edit')" icon="pi pi-pencil"
-                                [rounded]="true" [text]="true" severity="secondary" (onClick)="openEdit()"></p-button>
-                            <p-button *ngIf="currentUser.permissions.includes('user:delete')" label="Dar de baja"
-                                icon="pi pi-user-minus" severity="danger" size="small" [text]="true"
-                                (onClick)="deactivateUser()"></p-button>
-                        </div>
-
-                        <div class="tags">
-
-                            <p-tag [value]="currentUser.role.toUpperCase()" [severity]="roleSeverity(currentUser.role)">
-                            </p-tag>
-
-                            <p-tag [value]="currentUser.status" [severity]="statusSeverity(currentUser.status)">
-                            </p-tag>
-
-                        </div>
-                    </div>
-
-
-                    <div class="kv">
-
-                        <div>
-                            <span>Usuario:</span>
-                            <b>{{ currentUser.username }}</b>
-                        </div>
-
-                        <div>
-                            <span>Email:</span>
-                            <b>{{ currentUser.email }}</b>
-                        </div>
-
-                        <div>
-                            <span>Teléfono:</span>
-                            <b>{{ currentUser.phone }}</b>
-                        </div>
-
-                        <div>
-                            <span>Nacimiento:</span>
-                            <b>{{ currentUser.birthDate }}</b>
-                        </div>
-
-                        <div class="full">
-                            <span>Dirección:</span>
-                            <b>{{ currentUser.address }}</b>
-                        </div>
-
-                    </div>
-
+            <div class="hero-center">
+                <div class="hero-name-row">
+                    <h1>{{ user.fullName }}</h1>
                 </div>
-
+                <p class="hero-subtitle">{{ user.email }}</p>
+                @if (user.puesto) {
+                    <p class="hero-subtitle" style="opacity:0.7">{{ user.puesto }}</p>
+                }
+                <div class="hero-actions">
+                    <p-button *appHasPermission="'user:edit'" icon="pi pi-pencil"
+                        label="Editar" size="small" [outlined]="true" (onClick)="openEdit()"></p-button>
+                </div>
             </div>
+        </div>
 
-        </p-card>
-
-
-
-        <!-- PERMISOS -->
-        <p-card *ngIf="currentUser.permissions.includes('users:view')" class="card" header="Permisos / Accesos">
-
-            <div class="toolbar">
-
-                <span class="p-input-icon-left">
-                    <i class="pi pi-search"></i>
-                    <input pInputText [(ngModel)]="q" placeholder="Filtrar permisos..." />
-                </span>
-
+        <!-- INFO CARDS -->
+        <div class="info-strip">
+            <div class="info-item">
+                <i class="pi pi-user"></i>
+                <div>
+                    <span class="info-label">Usuario</span>
+                    <span class="info-value">{{ user.username }}</span>
+                </div>
             </div>
-
-
-            <p-table [value]="filteredPermissions()" [tableStyle]="{ 'min-width': '100%' }" styleClass="p-datatable-sm"
-                [scrollable]="true" scrollHeight="350px">
-
-                <ng-template pTemplate="header">
-                    <tr>
-                        <th>Módulo</th>
-                        <th>Permiso</th>
-                        <th>Rol</th>
-                        <th>Estatus</th>
-                    </tr>
-                </ng-template>
-
-                <ng-template pTemplate="body" let-row>
-
-                    <tr>
-
-                        <td>
-                            {{ row.module || 'General' }}
-                        </td>
-
-                        <td>
-                            {{ row.name }}
-                        </td>
-
-                        <td>
-                            <p-tag [value]="row.role.toUpperCase()" [severity]="roleSeverity(row.role)">
-                            </p-tag>
-                        </td>
-
-                        <td>
-                            <p-tag [value]="row.status" [severity]="statusSeverity(row.status)">
-                            </p-tag>
-                        </td>
-
-                    </tr>
-
-                </ng-template>
-
-            </p-table>
-
-        </p-card>
-
-    </div>
-
-    <!-- RESUMEN DE TICKETS -->
-    <div class="summary-cards" *ngIf="currentUser.permissions.includes('ticket:view') && totalTickets > 0">
-        <div class="summary-card">
-            <div class="count">{{ totalTickets }}</div>
-            <div class="label">Total Asignados</div>
+            <div class="info-item">
+                <i class="pi pi-envelope"></i>
+                <div>
+                    <span class="info-label">Email</span>
+                    <span class="info-value">{{ user.email }}</span>
+                </div>
+            </div>
+            <div class="info-item">
+                <i class="pi pi-briefcase"></i>
+                <div>
+                    <span class="info-label">Puesto</span>
+                    <span class="info-value">{{ user.puesto || 'Sin asignar' }}</span>
+                </div>
+            </div>
+            <div class="info-item">
+                <i class="pi pi-id-card"></i>
+                <div>
+                    <span class="info-label">Grupo</span>
+                    <span class="info-value">{{ user.groupId || 'Sin grupo' }}</span>
+                </div>
+            </div>
         </div>
-        <div class="summary-card">
-            <div class="count" style="color: var(--blue-500)">{{ pendingTickets }}</div>
-            <div class="label">Pendientes</div>
+
+        <!-- STATS + PERMISOS -->
+        <div class="content-columns">
+            <!-- Stats de tickets -->
+            @if (totalTickets > 0) {
+                <div class="col-stats">
+                    <h3 class="section-title"><i class="pi pi-chart-bar"></i> Resumen de Tickets</h3>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number">{{ totalTickets }}</div>
+                            <div class="stat-label">Total</div>
+                        </div>
+                        <div class="stat-card stat-pending">
+                            <div class="stat-number">{{ pendingTickets }}</div>
+                            <div class="stat-label">Pendientes</div>
+                        </div>
+                        <div class="stat-card stat-progress">
+                            <div class="stat-number">{{ progressTickets }}</div>
+                            <div class="stat-label">En progreso</div>
+                        </div>
+                        <div class="stat-card stat-done">
+                            <div class="stat-number">{{ doneTickets }}</div>
+                            <div class="stat-label">Hechos</div>
+                        </div>
+                        <div class="stat-card stat-blocked">
+                            <div class="stat-number">{{ blockedTickets }}</div>
+                            <div class="stat-label">Bloqueados</div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- Permisos -->
+            <div class="col-perms">
+                <h3 class="section-title"><i class="pi pi-lock"></i> Permisos / Accesos</h3>
+                <div class="perms-card">
+                    <p-table [value]="permissions" [tableStyle]="{ 'min-width': '100%' }"
+                        styleClass="p-datatable-sm" [scrollable]="true" scrollHeight="320px">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th>Módulo</th>
+                                <th>Permiso</th>
+                                <th>Estatus</th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-row>
+                            <tr>
+                                <td>{{ row.module || 'General' }}</td>
+                                <td><b>{{ row.name }}</b></td>
+                                <td>
+                                    <p-tag [value]="row.status" [severity]="statusSeverity(row.status)"></p-tag>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="3" class="text-center p-4">Sin permisos asignados.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </div>
         </div>
-        <div class="summary-card">
-            <div class="count" style="color: var(--yellow-500)">{{ progressTickets }}</div>
-            <div class="label">En progreso</div>
-        </div>
-        <div class="summary-card">
-            <div class="count" style="color: var(--green-500)">{{ doneTickets }}</div>
-            <div class="label">Hechos</div>
-        </div>
-        <div class="summary-card">
-            <div class="count" style="color: var(--red-500)">{{ blockedTickets }}</div>
-            <div class="label">Bloqueados</div>
-        </div>
-    </div>
 
+        <!-- TICKETS ASIGNADOS -->
+        @if (assignedTickets().length > 0) {
+            <div class="full-section">
+                <h3 class="section-title"><i class="pi pi-ticket"></i> Mis Tickets Asignados</h3>
+                <div class="table-card">
+                    <p-table [value]="assignedTickets()" [rows]="5" [paginator]="true" styleClass="p-datatable-sm"
+                        responsiveLayout="scroll" [rowHover]="true" dataKey="id">
+                        <ng-template pTemplate="header">
+                            <tr>
+                                <th pSortableColumn="title">Título <p-sortIcon field="title"></p-sortIcon></th>
+                                <th pSortableColumn="state">Estado <p-sortIcon field="state"></p-sortIcon></th>
+                                <th pSortableColumn="priority">Prioridad <p-sortIcon field="priority"></p-sortIcon></th>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="body" let-ticket>
+                            <tr>
+                                <td><b>{{ ticket.title }}</b></td>
+                                <td>
+                                    <p-tag [value]="ticket.state" severity="info"></p-tag>
+                                </td>
+                                <td>
+                                    <p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template pTemplate="emptymessage">
+                            <tr>
+                                <td colspan="3" class="text-center p-4 text-color-secondary">No tienes tickets asignados.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                </div>
+            </div>
+        }
 
-    <!-- TICKETS ASIGNADOS (Lista) -->
-    <p-panel *ngIf="currentUser.permissions.includes('ticket:view') && totalTickets > 0" header="Mis Tickets Asignados"
-        class="panel">
-        <p-table [value]="assignedTickets" [rows]="5" [paginator]="true" styleClass="p-datatable-sm"
-            responsiveLayout="scroll" [rowHover]="true" selectionMode="single" dataKey="id">
-            <ng-template pTemplate="header">
-                <tr>
-                    <th pSortableColumn="id">ID <p-sortIcon field="id"></p-sortIcon></th>
-                    <th pSortableColumn="title">Título <p-sortIcon field="title"></p-sortIcon></th>
-                    <th pSortableColumn="state">Estado <p-sortIcon field="state"></p-sortIcon></th>
-                    <th pSortableColumn="priority">Prioridad <p-sortIcon field="priority"></p-sortIcon></th>
-                    <th pSortableColumn="dueDate">Límite <p-sortIcon field="dueDate"></p-sortIcon></th>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="body" let-ticket>
-                <tr [pSelectableRow]="ticket">
-                    <td><b>{{ticket.id}}</b></td>
-                    <td>{{ticket.title}}</td>
-                    <td>
-                        <p-tag [value]="ticket.state" severity="info"></p-tag>
-                    </td>
-                    <td>
-                        <p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
-                    </td>
-                    <td>{{ticket.dueDate || 'Sin límite'}}</td>
-                </tr>
-            </ng-template>
-            <ng-template pTemplate="emptymessage">
-                <tr>
-                    <td colspan="5" class="text-center p-4 text-color-secondary">No tienes tickets asignados.</td>
-                </tr>
-            </ng-template>
-        </p-table>
-    </p-panel>
-
-    <br>
-
-    <!-- ACTIVIDAD -->
-    <p-panel *ngIf="currentUser.permissions.includes('user:view')" header="Actividad reciente" class="panel">
-
-        <p-table [value]="activity" [tableStyle]="{ 'min-width': '100%' }" styleClass="p-datatable-sm">
-
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Acción</th>
-                    <th>Fecha</th>
-                    <th>Resultado</th>
-                </tr>
-            </ng-template>
-
-            <ng-template pTemplate="body" let-row>
-
-                <tr>
-
-                    <td>
-                        {{ row.action }}
-                    </td>
-
-                    <td>
-                        {{ row.date }}
-                    </td>
-
-                    <td>
-                        <p-tag [value]="row.status" severity="success">
-                        </p-tag>
-                    </td>
-
-                </tr>
-
-            </ng-template>
-
-        </p-table>
-
-    </p-panel>
-
+    }
 </div>

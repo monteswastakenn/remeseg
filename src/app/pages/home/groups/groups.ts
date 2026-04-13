@@ -1,6 +1,7 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router, RouterModule } from '@angular/router';
 
 import { CardModule } from 'primeng/card';
 import { TableModule } from 'primeng/table';
@@ -9,208 +10,162 @@ import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { ToolbarModule } from 'primeng/toolbar';
 import { DialogModule } from 'primeng/dialog';
-import { SelectModule } from 'primeng/select';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { TextareaModule } from 'primeng/textarea';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+import { SkeletonModule } from 'primeng/skeleton';
 
-import { AuthService } from '../../../services/auth.service';
+import { AuthService, DbGroup } from '../../../services/auth.service';
+import { ApiGatewayService } from '../../../services/api-gateway.service';
+import { TicketService } from '../../../services/ticket.service';
+import { HasPermissionDirective } from '../../../directives/has-permission/has-permission.directive';
+import type { ApiResponse } from '../../../models/api-response.model';
 
-type Estatus = 'Activo' | 'Pausado' | 'Inactivo';
-type Nivel = 'Básico' | 'Intermedio' | 'Avanzado';
-
-type GroupRow = {
-  nombre: string;
-  nivel: Nivel;
-  autor: string;
-  users: { email: string; name: string }[];
-  tickets: number;
-  descripcion: string;
-  estatus: Estatus;
-};
+/** Vista enriquecida de un grupo con conteo de tickets */
+interface GroupRow {
+  id: string;
+  name: string;
+  description: string;
+  ticketCount: number;
+  memberCount: number;
+}
 
 @Component({
   selector: 'app-groups',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-
-    CardModule,
-    TableModule,
-    TagModule,
-    ButtonModule,
-    InputTextModule,
-    ToolbarModule,
-    DialogModule,
-    SelectModule,
-    InputNumberModule,
-    TextareaModule,
-    ToastModule
+    CommonModule, FormsModule, RouterModule,
+    CardModule, TableModule, TagModule, ButtonModule, InputTextModule,
+    ToolbarModule, DialogModule, TextareaModule, ToastModule, SkeletonModule,
+    HasPermissionDirective,
   ],
   providers: [MessageService],
   templateUrl: './groups.html',
   styleUrls: ['./groups.css']
 })
-export class Groups {
-  private msg = inject(MessageService);
-  private auth = inject(AuthService);
+export class Groups implements OnInit {
+  private msg       = inject(MessageService);
+  private auth      = inject(AuthService);
+  private gateway   = inject(ApiGatewayService);
+  private ticketSvc = inject(TicketService);
+  private router    = inject(Router);
 
-  currentUser = this.auth.currentUser();
+  loading = signal(true);
+  groups  = signal<GroupRow[]>([]);
 
   q = '';
 
-  nivelOptions = [
-    { label: 'Básico', value: 'Básico' as Nivel },
-    { label: 'Intermedio', value: 'Intermedio' as Nivel },
-    { label: 'Avanzado', value: 'Avanzado' as Nivel }
-  ];
-
-  statusOptions = [
-    { label: 'Activo', value: 'Activo' as Estatus },
-    { label: 'Pausado', value: 'Pausado' as Estatus },
-    { label: 'Inactivo', value: 'Inactivo' as Estatus }
-  ];
-
-  groups: GroupRow[] = [
-    {
-      nombre: 'Administradores',
-      nivel: 'Avanzado',
-      autor: 'ERP System',
-      users: [
-        { email: 'pansotic29@gmail.com', name: 'Panso TIC' },
-        { email: 'admin2@ejemplo.com', name: 'Admin Dos' },
-        { email: 'admin3@ejemplo.com', name: 'Admin Tres' }
-      ],
-      tickets: 12,
-      descripcion: 'Acceso total al sistema.',
-      estatus: 'Activo'
-    },
-    {
-      nombre: 'Ventas',
-      nivel: 'Intermedio',
-      autor: 'ERP System',
-      users: [
-        { email: 'ventas1@ejemplo.com', name: 'Laura Ventas' },
-        { email: 'ventas2@ejemplo.com', name: 'Carlos Ventas' }
-      ],
-      tickets: 7,
-      descripcion: 'Gestión de ventas y reportes.',
-      estatus: 'Activo'
-    },
-    {
-      nombre: 'Soporte',
-      nivel: 'Intermedio',
-      autor: 'ERP System',
-      users: [
-        { email: 'soporte1@ejemplo.com', name: 'Ana Soporte' },
-        { email: 'soporte2@ejemplo.com', name: 'Luis Soporte' }
-      ],
-      tickets: 21,
-      descripcion: 'Atención a incidencias.',
-      estatus: 'Activo'
-    },
-    {
-      nombre: 'Invitados',
-      nivel: 'Básico',
-      autor: 'ERP System',
-      users: [
-        { email: 'invitado1@ejemplo.com', name: 'Invitado Uno' }
-      ],
-      tickets: 0,
-      descripcion: 'Acceso limitado.',
-      estatus: 'Pausado'
-    }
-  ];
-
   filtered = computed(() => {
     const s = this.q.trim().toLowerCase();
-    if (!s) return this.groups;
-    return this.groups.filter(g => g.nombre.toLowerCase().includes(s));
+    if (!s) return this.groups();
+    return this.groups().filter(g => g.name.toLowerCase().includes(s));
   });
 
-  statusSeverity(status: Estatus): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' {
-    switch (status) {
-      case 'Activo': return 'success';
-      case 'Pausado': return 'warn';
-      case 'Inactivo': return 'danger';
-      default: return 'info';
-    }
-  }
-
-  // --- Modal  (CRUD visual)
+  // ── Dialog CRUD ───────────────────────────────────────────────────────────
   dialogOpen = false;
   isEdit = false;
-  editIndex = -1;
+  editingGroupId = '';
+  draft = { name: '', description: '' };
 
-  draft: GroupRow = this.emptyDraft();
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  async ngOnInit() {
+    await this.loadGroups();
+  }
 
+  async loadGroups() {
+    this.loading.set(true);
+
+    const groupsRes = await this.auth.getGroups();
+    const rawGroups: DbGroup[] = groupsRes.data ?? [];
+
+    // Cargar conteo de tickets y miembros por grupo
+    const enriched = await Promise.all(
+      rawGroups.map(async (g): Promise<GroupRow> => {
+        const ticketRes = await this.ticketSvc.getTicketsByGroup(g.id);
+        const ticketCount = ticketRes.data?.length ?? 0;
+
+        // Contar miembros del grupo
+        const usersRes = await this.auth.getUsers();
+        const allUsers = usersRes.data ?? [];
+        const memberCount = allUsers.filter(u => u.group_id === g.id).length;
+
+        return {
+          id: g.id,
+          name: g.name,
+          description: g.description ?? 'Sin descripción',
+          ticketCount,
+          memberCount,
+        };
+      })
+    );
+
+    this.groups.set(enriched);
+    this.loading.set(false);
+  }
+
+  // ── Navegación ────────────────────────────────────────────────────────────
+  viewTickets(row: GroupRow) {
+    this.router.navigate(['/home/groups', row.id]);
+  }
+
+  // ── Crear grupo ───────────────────────────────────────────────────────────
   openCreate() {
     this.isEdit = false;
-    this.editIndex = -1;
-    this.draft = this.emptyDraft();
+    this.editingGroupId = '';
+    this.draft = { name: '', description: '' };
     this.dialogOpen = true;
   }
 
+  // ── Editar grupo ──────────────────────────────────────────────────────────
   openEdit(row: GroupRow) {
     this.isEdit = true;
-    this.editIndex = this.groups.indexOf(row);
-    this.draft = { ...row };
+    this.editingGroupId = row.id;
+    this.draft = { name: row.name, description: row.description };
     this.dialogOpen = true;
   }
 
-  save() {
-    if (this.isEdit && this.editIndex >= 0) {
-      this.groups[this.editIndex] = { ...this.draft };
-      this.groups = [...this.groups];
+  // ── Guardar (crear o editar) ──────────────────────────────────────────────
+  async save() {
+    if (!this.draft.name.trim()) {
+      this.msg.add({ severity: 'warn', summary: 'Campo requerido', detail: 'El nombre es obligatorio.', life: 3000 });
+      return;
+    }
+
+    let result: ApiResponse;
+
+    if (this.isEdit) {
+      result = await this.gateway.update('groups', 'group:edit', this.editingGroupId, {
+        name: this.draft.name.trim(),
+        description: this.draft.description.trim() || null,
+      });
     } else {
-      this.groups = [{ ...this.draft }, ...this.groups];
-    }
-    this.dialogOpen = false;
-  }
-
-  remove(row: GroupRow) {
-    this.groups = this.groups.filter(g => g !== row);
-    this.msg.add({ severity: 'success', summary: 'Grupo eliminado', detail: 'El grupo ha sido eliminado exitosamente' });
-  }
-
-  // --- User Management in Draft ---
-  newUserEmail: string = '';
-
-  addUserToGroup() {
-    if (!this.newUserEmail || !this.newUserEmail.includes('@')) {
-      this.msg.add({ severity: 'error', summary: 'Error', detail: 'Email inválido' });
-      return;
+      result = await this.gateway.insert('groups', 'group:create', {
+        name: this.draft.name.trim(),
+        description: this.draft.description.trim() || null,
+      });
     }
 
-    // Check if already exists
-    if (this.draft.users.some(u => u.email === this.newUserEmail)) {
-      this.msg.add({ severity: 'warn', summary: 'Usuario Existente', detail: 'Este usuario ya está en el grupo' });
-      return;
+    if (result.statusCode >= 200 && result.statusCode < 300) {
+      this.msg.add({ severity: 'success', summary: this.isEdit ? 'Grupo actualizado' : 'Grupo creado', life: 2500 });
+      this.dialogOpen = false;
+      await this.loadGroups();
+    } else if (result.statusCode === 403) {
+      this.msg.add({ severity: 'error', summary: 'Sin permisos', detail: 'No tienes permiso para esta acción.', life: 4000 });
+    } else {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar el grupo.', life: 3000 });
     }
-
-    // Add with a default name for now
-    this.draft.users.unshift({
-      email: this.newUserEmail,
-      name: this.newUserEmail.split('@')[0]
-    });
-    this.newUserEmail = '';
   }
 
-  removeUserFromGroup(email: string) {
-    this.draft.users = this.draft.users.filter(u => u.email !== email);
-  }
-
-  private emptyDraft(): GroupRow {
-    return {
-      nombre: '',
-      nivel: 'Básico',
-      autor: 'ERP System',
-      users: [],
-      tickets: 0,
-      descripcion: '',
-      estatus: 'Activo'
-    };
+  // ── Eliminar grupo ────────────────────────────────────────────────────────
+  async remove(row: GroupRow) {
+    const result = await this.gateway.delete('groups', 'group:delete', row.id);
+    if (result.statusCode === 200) {
+      this.groups.update(list => list.filter(g => g.id !== row.id));
+      this.msg.add({ severity: 'success', summary: 'Grupo eliminado', life: 2500 });
+    } else if (result.statusCode === 403) {
+      this.msg.add({ severity: 'error', summary: 'Sin permisos', detail: 'No tienes permiso para eliminar grupos.', life: 4000 });
+    } else {
+      this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo eliminar el grupo.', life: 3000 });
+    }
   }
 }

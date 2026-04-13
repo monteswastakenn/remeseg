@@ -1,73 +1,64 @@
-<aside class="sidebar" [class.is-collapsed]="collapsed">
-    <div class="top">
-        <button class="toggle" type="button" (click)="onToggle?.()" aria-label="Toggle sidebar">
-            <i class="pi pi-bars"></i>
-        </button>
-
-        <div class="brand" *ngIf="!collapsed">
-            <div class="logo">ERP</div>
-            <div class="subtitle">Panel</div>
+<aside class="sidebar-wrapper" [class.collapsed]="collapsed">
+    <div class="sidebar-header">
+        <div class="brand">
+            <div class="brand-icon">
+                <i class="pi pi-shield"></i>
+            </div>
+            <h3 *ngIf="!collapsed" class="brand-text">ERP Tickets</h3>
         </div>
     </div>
 
-    <nav class="menu">
-        <!-- 1. Dashboard -->
-        <a routerLink="/home/dashboard" routerLinkActive="active" class="item">
-            <i class="pi pi-home"></i>
-            <span class="label" *ngIf="!collapsed">Dashboard</span>
-        </a>
+    <ul class="sidebar-nav">
 
-        <a *ngIf="canView('user:view') || canView('users:view')" routerLink="/home/users" routerLinkActive="active"
-            class="item">
-            <i class="pi pi-user"></i>
-            <span class="label" *ngIf="!collapsed">Mi Perfil</span>
-        </a>
+        <!-- Dashboard -->
+        <li>
+            <a routerLink="/home/dashboard" routerLinkActive="active"
+               [pTooltip]="collapsed ? 'Dashboard' : ''" tooltipPosition="right">
+                <i class="pi pi-home"></i>
+                <span *ngIf="!collapsed">Dashboard</span>
+            </a>
+        </li>
 
-        <!-- 3. Admin Users (Super Admin only for now, though logic can be tailored) -->
-        <a *ngIf="canView('users:view')" routerLink="/home/admin-users" routerLinkActive="active"
-            class="item">
-            <i class="pi pi-users"></i>
-            <span class="label" *ngIf="!collapsed">Gestión Usuarios</span>
-        </a>
+        <!-- Mi Perfil -->
+        <li>
+            <a routerLink="/home/users" routerLinkActive="active"
+               [pTooltip]="collapsed ? 'Mi Perfil' : ''" tooltipPosition="right">
+                <i class="pi pi-user"></i>
+                <span *ngIf="!collapsed">Mi Perfil</span>
+            </a>
+        </li>
 
-        <!-- 3. Tickets -->
-        <a *ngIf="canView('ticket:view')" routerLink="/home/tickets" routerLinkActive="active" class="item">
-            <i class="pi pi-ticket"></i>
-            <span class="label" *ngIf="!collapsed">Tickets</span>
-        </a>
+        <li class="nav-divider" *ngIf="!collapsed">
+            <span class="nav-section">Gestión</span>
+        </li>
 
-        <!-- 4. Groups Section (Dropdown) -->
-        <div *ngIf="canView('group:view')" class="menu-group">
-            <div class="item" (click)="toggleGroupsMenu()" [class.active]="groupsMenuExpanded">
+        <!-- Grupos -->
+        <li>
+            <a routerLink="/home/groups" routerLinkActive="active"
+               [pTooltip]="collapsed ? 'Grupos' : ''" tooltipPosition="right">
                 <i class="pi pi-sitemap"></i>
-                <div class="item-label-container" *ngIf="!collapsed">
-                    <span class="label">Groups Section</span>
-                    <i class="pi pi-chevron-down chevron" [class.open]="groupsMenuExpanded"></i>
-                </div>
-            </div>
+                <span *ngIf="!collapsed">Grupos</span>
+            </a>
+        </li>
 
-            <div class="submenu" *ngIf="groupsMenuExpanded && !collapsed">
-                <a routerLink="/home/groups" routerLinkActive="active" class="sub-item">
-                    <i class="pi pi-list"></i>
-                    <span>Groups</span>
-                </a>
-                <a routerLink="/home/group-tickets" routerLinkActive="active" class="sub-item">
-                    <i class="pi pi-th-large"></i>
-                    <span>Groups (Tickets)</span>
-                </a>
-            </div>
-        </div>
-    </nav>
+        <!-- Gestión Usuarios (solo admin) -->
+        <li>
+            <a routerLink="/home/admin-users" routerLinkActive="active"
+               [pTooltip]="collapsed ? 'Gestión Usuarios' : ''" tooltipPosition="right">
+                <i class="pi pi-users"></i>
+                <span *ngIf="!collapsed">Gestión Usuarios</span>
+            </a>
+        </li>
 
-    <div class="bottom">
-        <!-- cuando NO está colapsado: botón normal -->
+    </ul>
+
+    <div class="sidebar-footer">
         <button *ngIf="!collapsed" pButton type="button" label="Cerrar sesión" icon="pi pi-sign-out"
             severity="secondary" class="w-full" (click)="logout()"></button>
 
-        <!-- cuando está colapsado: solo icono -->
-        <button *ngIf="collapsed" class="logout-icon" type="button" (click)="logout()" aria-label="Cerrar sesión"
-            title="Cerrar sesión">
-            <i class="pi pi-sign-out"></i>
+        <button *ngIf="collapsed" pButton type="button" icon="pi pi-sign-out" severity="secondary" class="w-full"
+            (click)="logout()" aria-label="Cerrar sesión" pTooltip="Cerrar sesión" tooltipPosition="right">
         </button>
+        <div *ngIf="!collapsed" class="version-tag">v1.0.0</div>
     </div>
 </aside>

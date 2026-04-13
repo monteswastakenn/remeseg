@@ -1,7 +1,16 @@
-<div class="layout">
-    <app-sidebar [collapsed]="collapsed" [onToggle]="toggleSidebar.bind(this)"></app-sidebar>
+<div class="layout-wrapper" [class.collapsed]="collapsed">
+    <app-sidebar [collapsed]="collapsed"></app-sidebar>
 
-    <main class="content" [class.is-collapsed]="collapsed">
-        <router-outlet></router-outlet>
-    </main>
+    <div class="main-container">
+        <header class="topbar">
+            <button pButton type="button" icon="pi pi-bars" class="p-button-text p-button-secondary" (click)="toggleSidebar()"></button>
+            <div class="user-profile">
+                <!-- User Profile or other topbar info goes here -->
+            </div>
+        </header>
+
+        <main class="content-area">
+            <router-outlet></router-outlet>
+        </main>
+    </div>
 </div>

@@ -1,137 +1,93 @@
 <p-toast></p-toast>
 
-<div class="page">
-    <header class="head">
-        <h1>Groups</h1>
-        <p>Gestión de grupos.</p>
+<div class="page-container">
+    <header class="header">
+        <div>
+            <h2>Groups</h2>
+            <p>Gestión de grupos.</p>
+        </div>
     </header>
 
-    <p-card class="card" header="Lista de grupos">
-        <div class="toolbar">
-            <span class="p-input-icon-left">
-                <i class="pi pi-search"></i>
-                <input pInputText [(ngModel)]="q" placeholder="Buscar grupo..." />
-            </span>
+    <!-- Skeleton mientras carga -->
+    @if (loading()) {
+        <p-card class="card" header="Lista de grupos">
+            <p-skeleton height="2rem" styleClass="mb-2"></p-skeleton>
+            <p-skeleton height="2rem" styleClass="mb-2"></p-skeleton>
+            <p-skeleton height="2rem"></p-skeleton>
+        </p-card>
+    } @else {
+        <p-card class="card" header="Lista de grupos">
+            <div class="toolbar">
+                <span class="p-input-icon-left">
+                    <i class="pi pi-search"></i>
+                    <input pInputText [(ngModel)]="q" placeholder="Buscar grupo..." />
+                </span>
 
-            <button *ngIf="currentUser?.permissions?.includes('group:add')" pButton type="button" label="Nuevo grupo"
-                icon="pi pi-plus" (click)="openCreate()"></button>
-        </div>
+                <button *appHasPermission="'group:create'" pButton type="button" label="Nuevo grupo"
+                    icon="pi pi-plus" (click)="openCreate()"></button>
+            </div>
 
-        <p-table [value]="filtered()" [paginator]="true" [rows]="7" [rowsPerPageOptions]="[7,10,20]"
-            [tableStyle]="{ 'min-width': '100%' }" styleClass="p-datatable-sm">
+            <p-table [value]="filtered()" [paginator]="true" [rows]="7" [rowsPerPageOptions]="[7,10,20]"
+                [tableStyle]="{ 'min-width': '100%' }" styleClass="p-datatable-sm">
 
-            <ng-template pTemplate="header">
-                <tr>
-                    <th>Nombre</th>
-                    <th>Nivel</th>
-                    <th>Autor</th>
-                    <th>Integrantes</th>
-                    <th>Tickets</th>
-                    <th>Estatus</th>
-                    <th style="width: 160px;">Acciones</th>
-                </tr>
-            </ng-template>
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Descripción</th>
+                        <th>Integrantes</th>
+                        <th>Tickets</th>
+                        <th style="width: 200px;">Acciones</th>
+                    </tr>
+                </ng-template>
 
-            <ng-template pTemplate="body" let-row>
-                <tr>
-                    <td class="gname">
-                        <span class="badge"><i class="pi pi-sitemap"></i></span>
-                        <div class="gmeta">
-                            <span class="title">{{ row.nombre }}</span>
-                            <small class="desc">{{ row.descripcion }}</small>
-                        </div>
-                    </td>
+                <ng-template pTemplate="body" let-row>
+                    <tr>
+                        <td class="gname" style="cursor: pointer;" (click)="viewTickets(row)">
+                            <span class="badge"><i class="pi pi-sitemap"></i></span>
+                            <div class="gmeta">
+                                <span class="title" style="color: var(--primary-color);">{{ row.name }}</span>
+                            </div>
+                        </td>
 
-                    <td>{{ row.nivel }}</td>
-                    <td>{{ row.autor }}</td>
-                    <td>{{ row.users?.length || 0 }}</td>
-                    <td>{{ row.tickets }}</td>
+                        <td>{{ row.description }}</td>
+                        <td>{{ row.memberCount }}</td>
+                        <td>{{ row.ticketCount }}</td>
 
-                    <td>
-                        <p-tag [value]="row.estatus" [severity]="statusSeverity(row.estatus)"></p-tag>
-                    </td>
+                        <td>
+                            <div class="actions">
+                                <button pButton type="button" icon="pi pi-ticket" severity="info" rounded
+                                    title="Ver tickets" (click)="viewTickets(row)"></button>
+                                <button *appHasPermission="'group:edit'" pButton type="button"
+                                    icon="pi pi-pencil" severity="secondary" rounded (click)="openEdit(row)"></button>
+                                <button *appHasPermission="'group:delete'" pButton type="button"
+                                    icon="pi pi-trash" severity="danger" rounded (click)="remove(row)"></button>
+                            </div>
+                        </td>
+                    </tr>
+                </ng-template>
 
-                    <td>
-                        <div class="actions">
-                            <button *ngIf="currentUser?.permissions?.includes('group:edit')" pButton type="button"
-                                icon="pi pi-pencil" severity="secondary" rounded (click)="openEdit(row)"></button>
-                            <button *ngIf="currentUser?.permissions?.includes('group:delete')" pButton type="button"
-                                icon="pi pi-trash" severity="danger" rounded (click)="remove(row)"></button>
-                        </div>
-                    </td>
-                </tr>
-            </ng-template>
-        </p-table>
-    </p-card>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="5" class="text-center p-4">No se encontraron grupos.</td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </p-card>
+    }
 </div>
 
 <p-dialog [(visible)]="dialogOpen" [modal]="true" [draggable]="false" [resizable]="false"
-    [style]="{ width: '720px', maxWidth: '92vw' }" [header]="isEdit ? 'Editar grupo' : 'Nuevo grupo'">
+    [style]="{ width: '520px', maxWidth: '92vw' }" [header]="isEdit ? 'Editar grupo' : 'Nuevo grupo'">
 
     <div class="dlgGrid">
-        <div class="field">
+        <div class="field full">
             <label>Nombre</label>
-            <input pInputText [(ngModel)]="draft.nombre" placeholder="Nombre del grupo" />
+            <input pInputText [(ngModel)]="draft.name" placeholder="Nombre del grupo" />
         </div>
-
-        <div class="field">
-            <label>Nivel</label>
-            <p-select [options]="nivelOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.nivel"
-                placeholder="Selecciona">
-            </p-select>
-        </div>
-
-        <div class="field">
-            <label>Autor</label>
-            <input pInputText [(ngModel)]="draft.autor" placeholder="Autor" />
-        </div>
-
-        <div class="field">
-            <label>Estatus</label>
-            <p-select [options]="statusOptions" optionLabel="label" optionValue="value" [(ngModel)]="draft.estatus">
-            </p-select>
-        </div>
-
-        <div class="field">
-            <label>Tickets (Referencia)</label>
-            <p-inputNumber [(ngModel)]="draft.tickets" [min]="0"></p-inputNumber>
-        </div>
-
-
 
         <div class="field full">
             <label>Descripción</label>
-            <textarea pTextarea [(ngModel)]="draft.descripcion" rows="3" placeholder="Descripción del grupo"></textarea>
-        </div>
-    </div>
-
-    <!-- Gestión de Usuarios -->
-    <div class="field full mt-4">
-        <label>Integrantes del Grupo</label>
-
-        <div class="flex gap-2 mb-3 mt-2">
-            <span class="p-input-icon-left flex-1">
-                <i class="pi pi-envelope"></i>
-                <input pInputText placeholder="Ej: nuevo.usuario@ejemplo.com" [(ngModel)]="newUserEmail"
-                    class="w-full pl-5" (keyup.enter)="addUserToGroup()" />
-            </span>
-            <button pButton type="button" icon="pi pi-plus" label="Añadir" (click)="addUserToGroup()"></button>
-        </div>
-
-        <div class="member-list flex flex-column gap-2 p-3 border-round border-1 surface-border"
-            style="background: rgba(0,0,0,0.1); max-height: 200px; overflow-y: auto;">
-            <div *ngIf="!draft.users || draft.users.length === 0" class="text-sm text-center text-color-secondary p-2">
-                No hay usuarios en este grupo.
-            </div>
-            <div *ngFor="let u of draft.users"
-                class="member-item flex align-items-center justify-content-between p-2 surface-card border-round shadow-1">
-                <div class="flex flex-column">
-                    <span class="font-semibold text-sm">{{u.name}}</span>
-                    <span class="text-xs text-color-secondary">{{u.email}}</span>
-                </div>
-                <p-button icon="pi pi-trash" severity="danger" [text]="true" [rounded]="true"
-                    (onClick)="removeUserFromGroup(u.email)"></p-button>
-            </div>
+            <textarea pTextarea [(ngModel)]="draft.description" rows="3" placeholder="Descripción del grupo"></textarea>
         </div>
     </div>
 

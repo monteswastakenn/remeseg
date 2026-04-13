@@ -1,23 +1,17 @@
-.page {
-    padding: 22px;
-    color: #e9eef7;
-}
+.page-container { color: var(--text-color); }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header h2 { margin: 0; font-size: 1.8rem; color: var(--text-color); }
 
-.head h1 {
-    margin: 0;
-    font-size: 28px;
-}
-
-.head p {
+.header p {
     margin: 6px 0 18px;
-    opacity: 0.75;
+    color: var(--text-color-secondary);
 }
 
 .card :deep(.p-card) {
-    background: rgba(15, 18, 23, 0.72);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
-    backdrop-filter: blur(10px);
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    border-top: 2px solid var(--primary-color);
 }
 
 .toolbar {
@@ -37,7 +31,7 @@
 .badge {
     width: 34px;
     height: 34px;
-    border-radius: 10px;
+    border-radius: 4px;
     display: grid;
     place-items: center;
     background: rgba(59, 130, 246, 0.14);
@@ -106,7 +100,7 @@
 }
 
 .member-list {
-    background: rgba(0, 0, 0, 0.15);
+    background: #f8f9fa;
 }
 
 .member-item {
@@ -114,5 +108,5 @@
 }
 
 .member-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(0, 0, 0, 0.03);
 }

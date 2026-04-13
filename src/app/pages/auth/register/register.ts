@@ -1,43 +1,24 @@
 import { Component } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import {
-  FormBuilder,
-  ReactiveFormsModule,
-  Validators,
-  AbstractControl,
-  ValidationErrors,
-  FormGroup
+  FormBuilder, Validators, ReactiveFormsModule, FormGroup, AbstractControl, ValidationErrors
 } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
-import { DatePickerModule } from 'primeng/datepicker';
-import { KeyFilterModule } from 'primeng/keyfilter';
+import { DividerModule } from 'primeng/divider';
 import { MessageService } from 'primeng/api';
+import { CommonModule } from '@angular/common';
 
-function adultValidator(control: AbstractControl): ValidationErrors | null {
-  const value = control.value;
-  if (!value) return { adult: true };
+import { AuthService } from '../../../services/auth.service';
 
-  const birth = new Date(value);
-  const today = new Date();
-
-  let age = today.getFullYear() - birth.getFullYear();
-  const m = today.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-
-  return age >= 18 ? null : { adult: true };
-}
-
-function passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-  const pass = control.get('password')?.value;
-  const confirm = control.get('confirmPassword')?.value;
-  if (!pass || !confirm) return null;
-  return pass === confirm ? null : { passwordMismatch: true };
+function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+  const pass = group.get('password')?.value;
+  const confirm = group.get('confirmPassword')?.value;
+  return pass === confirm ? null : { mismatch: true };
 }
 
 @Component({
@@ -51,68 +32,69 @@ function passwordMatchValidator(control: AbstractControl): ValidationErrors | nu
     PasswordModule,
     ButtonModule,
     ToastModule,
-    DatePickerModule,
-    KeyFilterModule
+    DividerModule,
+    RouterLink
   ],
   providers: [MessageService],
   templateUrl: './register.html',
-  styleUrls: ['./register.css']
+  styleUrls: ['./register.css'],
 })
 export class Register {
   loading = false;
-
-  form!: FormGroup; // 👈 se inicializa en el constructor
+  form!: FormGroup;
 
   constructor(
     private fb: FormBuilder,
-    private messageService: MessageService,
-    private router: Router
+    private auth: AuthService,
+    private router: Router,
+    private msg: MessageService
   ) {
     this.form = this.fb.group(
       {
-        username: ['', [Validators.required, Validators.minLength(3)]],
+        fullName: ['', Validators.required],
+        username: ['', Validators.required],
         email: ['', [Validators.required, Validators.email]],
-        fullName: ['', [Validators.required, Validators.minLength(3)]],
-        address: ['', [Validators.required, Validators.minLength(5)]],
-        phone: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]],
-        birthDate: [null, [adultValidator]],
-        password: [
-          '',
-          [
-            Validators.required,
-            Validators.minLength(10),
-            Validators.pattern(/^(?=.*[!@#$%^&*()_\-+=\[\]{};:'",.<>/?\\|`~]).{10,}$/)
-          ]
-        ],
-        confirmPassword: ['', [Validators.required]]
+        password: ['', [Validators.required, Validators.minLength(6)]],
+        confirmPassword: ['', Validators.required],
       },
-      { validators: [passwordMatchValidator] }
+      { validators: passwordsMatch }
     );
   }
 
-  submit() {
+  async submit(): Promise<void> {
     this.form.markAllAsTouched();
 
     if (this.form.invalid) {
-      this.messageService.add({
-        severity: 'error',
+      this.msg.add({
+        severity: 'warn',
         summary: 'Formulario inválido',
-        detail: 'Revisa los campos marcados.'
+        detail: 'Revisa todos los campos.'
       });
       return;
     }
 
+    const { email, password, fullName, username } = this.form.value;
     this.loading = true;
 
-    setTimeout(() => {
-      this.loading = false;
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Registro OK',
-        detail: 'Datos validados correctamente.'
-      });
+    const result = await this.auth.register(email, password, fullName, username);
 
-      this.router.navigate(['/login']);
-    }, 700);
+    this.loading = false;
+
+    if (result.statusCode !== 201) {
+      this.msg.add({
+        severity: 'error',
+        summary: 'Error al registrar',
+        detail: 'Ocurrió un error inesperado.'
+      });
+      return;
+    }
+
+    this.msg.add({
+      severity: 'success',
+      summary: 'Registro exitoso',
+      detail: 'Revisa tu correo para confirmar tu cuenta.'
+    });
+
+    setTimeout(() => this.router.navigate(['/login']), 1500);
   }
 }

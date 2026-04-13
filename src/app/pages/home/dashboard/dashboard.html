@@ -1,10 +1,235 @@
-<div class="page">
-    <header class="head">
-        <h1>Dashboard</h1>
-        <p>Bienvenido al panel de control.</p>
-    </header>
+<p-toast></p-toast>
 
-    <div class="content mt-4">
-        <p>Selecciona una opción del menú lateral para comenzar.</p>
+<div class="dashboard-container">
+
+    <!-- ═══ Header ═══ -->
+    <div class="dash-header">
+        <div class="greeting-block">
+            <h1 class="greeting-title">{{ greeting }}, <span class="accent">{{ currentUser()?.fullName || 'Usuario' }}</span></h1>
+            <p class="greeting-sub">{{ todayFormatted }}</p>
+        </div>
+        <div class="header-actions">
+            <div class="group-selector">
+                <label class="selector-label">
+                    <i class="pi pi-sitemap"></i> Workspace activo
+                </label>
+                <p-select
+                    [options]="groupOptions()"
+                    [ngModel]="selectedGroupId()"
+                    (ngModelChange)="onGroupChange($event)"
+                    optionLabel="label"
+                    optionValue="value"
+                    placeholder="Selecciona grupo"
+                    styleClass="w-full"
+                    [disabled]="loading()">
+                </p-select>
+            </div>
+            <p-button
+                label="Ir al Kanban"
+                icon="pi pi-objects-column"
+                severity="primary"
+                [disabled]="!selectedGroupId() || loading()"
+                (onClick)="navigateToKanban()">
+            </p-button>
+        </div>
     </div>
+
+    <!-- ═══ Skeleton mientras carga ═══ -->
+    <ng-container *ngIf="loading()">
+        <div class="stats-row">
+            <p-skeleton *ngFor="let i of [1,2,3,4,5]" height="90px" borderRadius="12px"></p-skeleton>
+        </div>
+        <div class="charts-row">
+            <p-skeleton height="340px" borderRadius="12px"></p-skeleton>
+            <p-skeleton height="340px" borderRadius="12px"></p-skeleton>
+            <p-skeleton height="340px" borderRadius="12px"></p-skeleton>
+        </div>
+    </ng-container>
+
+    <!-- ═══ Contenido principal ═══ -->
+    <ng-container *ngIf="!loading()">
+
+        <!-- Stats Cards -->
+        <div class="stats-row">
+            <div class="stat-card stat-total">
+                <div class="stat-icon-wrap bg-indigo"><i class="pi pi-ticket"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ totalTickets() }}</span>
+                    <span class="stat-label">Total Tickets</span>
+                </div>
+            </div>
+            <div class="stat-card stat-pending">
+                <div class="stat-icon-wrap bg-blue"><i class="pi pi-clock"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ ticketsPendiente() }}</span>
+                    <span class="stat-label">Pendientes</span>
+                </div>
+            </div>
+            <div class="stat-card stat-progress">
+                <div class="stat-icon-wrap bg-amber"><i class="pi pi-spin pi-spinner"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ ticketsEnProgreso() }}</span>
+                    <span class="stat-label">En Progreso</span>
+                </div>
+            </div>
+            <div class="stat-card stat-done">
+                <div class="stat-icon-wrap bg-emerald"><i class="pi pi-check-circle"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ ticketsHecho() }}</span>
+                    <span class="stat-label">Completados</span>
+                </div>
+            </div>
+            <div class="stat-card stat-blocked">
+                <div class="stat-icon-wrap bg-red"><i class="pi pi-ban"></i></div>
+                <div class="stat-info">
+                    <span class="stat-value">{{ ticketsBloqueado() }}</span>
+                    <span class="stat-label">Bloqueados</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3><i class="pi pi-chart-pie"></i> Distribución por Estado</h3>
+                    <p-tag [value]="selectedGroupLabel()" severity="info"></p-tag>
+                </div>
+                <div class="chart-wrap">
+                    <ng-container *ngIf="totalTickets() > 0; else noDataState">
+                        <p-chart type="doughnut" [data]="stateChartData()" [options]="chartOptions" height="260px"></p-chart>
+                    </ng-container>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <h3><i class="pi pi-flag"></i> Distribución por Prioridad</h3>
+                    <p-tag [value]="totalTickets() + ' tickets'" severity="secondary"></p-tag>
+                </div>
+                <div class="chart-wrap">
+                    <ng-container *ngIf="totalTickets() > 0; else noDataPriority">
+                        <p-chart type="doughnut" [data]="priorityChartData()" [options]="chartOptions" height="260px"></p-chart>
+                    </ng-container>
+                </div>
+            </div>
+
+            <!-- Tasa de Completado -->
+            <div class="chart-card completion-card">
+                <div class="chart-card-header">
+                    <h3><i class="pi pi-percentage"></i> Tasa de Completado</h3>
+                </div>
+                <div class="completion-body">
+                    <div class="chart-wrap" style="min-height: 140px; margin-top: -15px;">
+                        <p-chart type="doughnut" [data]="completionChartData()" [options]="chartOptions" height="200px"></p-chart>
+                    </div>
+                    <div style="text-align: center; margin-top: -25px;">
+                        <span class="ring-pct" style="display:block;">{{ completionRate() }}%</span>
+                        <span class="ring-sub" style="display:block; margin-top: 5px;">completado</span>
+                    </div>
+                    <div class="completion-breakdown">
+                        <div class="breakdown-item">
+                            <span class="dot dot-done"></span><span>Hecho</span><strong>{{ ticketsHecho() }}</strong>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="dot dot-prog"></span><span>En progreso</span><strong>{{ ticketsEnProgreso() }}</strong>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="dot dot-pend"></span><span>Pendiente</span><strong>{{ ticketsPendiente() }}</strong>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="dot dot-rev"></span><span>Revisión</span><strong>{{ ticketsRevision() }}</strong>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="dot dot-block"></span><span>Bloqueado</span><strong>{{ ticketsBloqueado() }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Row -->
+        <div class="bottom-row">
+
+            <!-- Actividad Reciente -->
+            <div class="panel-card activity-panel">
+                <div class="panel-header">
+                    <h3><i class="pi pi-history"></i> Actividad Reciente</h3>
+                </div>
+                <div class="activity-list">
+                    <div *ngIf="recentActivity().length === 0" class="empty-my-tickets">
+                        <i class="pi pi-inbox"></i>
+                        <span>Sin tickets en este grupo aún</span>
+                    </div>
+                    <div *ngFor="let a of recentActivity()" class="activity-item">
+                        <div class="activity-icon" [style.background]="a.color + '18'" [style.color]="a.color">
+                            <i [class]="a.icon"></i>
+                        </div>
+                        <div class="activity-info">
+                            <span class="activity-title">{{ a.title }}</span>
+                            <span class="activity-detail">{{ a.detail }}</span>
+                        </div>
+                        <span class="activity-time">{{ a.time }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mis Tickets Asignados -->
+            <div class="panel-card my-tickets-panel">
+                <div class="panel-header">
+                    <h3><i class="pi pi-bookmark"></i> Mis Tickets Asignados</h3>
+                    <p-tag [value]="myTickets().length + ''" severity="info" [rounded]="true"></p-tag>
+                </div>
+                <div class="my-tickets-list">
+                    <div *ngIf="myTickets().length === 0" class="empty-my-tickets">
+                        <i class="pi pi-inbox"></i>
+                        <span>Sin tickets asignados en este grupo</span>
+                    </div>
+                    <div *ngFor="let t of myTickets()" class="my-ticket-row">
+                        <div class="ticket-id-badge">TCK</div>
+                        <div class="ticket-meta">
+                            <span class="ticket-title-text">{{ t.title }}</span>
+                            <div class="ticket-tags">
+                                <p-tag [value]="t.state" [severity]="getStateSeverity(t.state)" [rounded]="true"></p-tag>
+                                <p-tag [value]="t.priority" [severity]="getPrioritySeverity(t.priority)" [rounded]="true"></p-tag>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="panel-card">
+                <div class="panel-header">
+                    <h3><i class="pi pi-bolt"></i> Acciones Rápidas</h3>
+                </div>
+                <div class="quick-actions-panel">
+                    <p-button label="Tablero Kanban" icon="pi pi-objects-column" severity="primary"
+                        [outlined]="true" class="w-full" (onClick)="navigateToKanban()"></p-button>
+                    <p-button label="Mi Perfil" icon="pi pi-user" severity="secondary"
+                        [outlined]="true" class="w-full" (onClick)="navigateToProfile()"></p-button>
+                    <p-button *appHasPermission="'users:view'" label="Gestión Usuarios" icon="pi pi-users" severity="warn"
+                        [outlined]="true" class="w-full" (onClick)="navigateToAdmin()"></p-button>
+                </div>
+            </div>
+
+        </div>
+
+    </ng-container>
+
 </div>
+
+<!-- Templates de estado vacío -->
+<ng-template #noDataState>
+    <div class="empty-my-tickets">
+        <i class="pi pi-chart-pie" style="font-size: 2rem; color: #cbd5e1;"></i>
+        <span>Sin datos para este grupo</span>
+    </div>
+</ng-template>
+
+<ng-template #noDataPriority>
+    <div class="empty-my-tickets">
+        <i class="pi pi-flag" style="font-size: 2rem; color: #cbd5e1;"></i>
+        <span>Sin datos disponibles</span>
+    </div>
+</ng-template>

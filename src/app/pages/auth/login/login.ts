@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule, FormGroup } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { CardModule } from 'primeng/card';
 import { InputTextModule } from 'primeng/inputtext';
@@ -18,6 +18,7 @@ import { AuthService } from '../../../services/auth.service';
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    RouterLink,
     CardModule,
     InputTextModule,
     PasswordModule,
@@ -44,7 +45,7 @@ export class Login {
     });
   }
 
-  submit(): void {
+  async submit(): Promise<void> {
     this.form.markAllAsTouched();
 
     if (this.form.invalid) {
@@ -56,31 +57,28 @@ export class Login {
       return;
     }
 
-    const email = this.form.value.email;
-    const password = this.form.value.password;
-
+    const { email, password } = this.form.value;
     this.loading = true;
 
-    const ok = this.auth.login(email, password);
+    const result = await this.auth.login(email, password);
 
     this.loading = false;
 
-    if (!ok) {
+    if (result.statusCode !== 200) {
       this.msg.add({
         severity: 'error',
         summary: 'Acceso denegado',
-        detail: 'Credenciales incorrectas.'
+        detail: 'Credenciales incorrectas o cuenta no verificada.'
       });
       return;
     }
 
     this.msg.add({
       severity: 'success',
-      summary: 'Bien',
+      summary: 'Bienvenido',
       detail: 'Inicio de sesión correcto.'
     });
 
-    this.router.navigateByUrl('/home/dashboard');
-
+    setTimeout(() => this.router.navigate(['/home']), 800);
   }
 }

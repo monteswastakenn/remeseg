@@ -1,21 +1,30 @@
 <p-toast></p-toast>
 
 <div class="auth-wrap">
-    <p-card header="Registro">
+    <p-card header="Registro de Cuenta">
         <form [formGroup]="form" (ngSubmit)="submit()" class="form">
             <div class="grid">
 
                 <!-- Usuario -->
                 <div class="field">
                     <label>Usuario</label>
-                    <input pInputText formControlName="username" placeholder="usuario123" />
+                    <input pInputText formControlName="username" placeholder="Nombre de usuario" />
                     <small class="error" *ngIf="form.controls['username'].touched && form.controls['username'].invalid">
-                        Usuario obligatorio (mínimo 3 caracteres).
+                        Usuario obligatorio.
+                    </small>
+                </div>
+
+                <!-- Nombre completo -->
+                <div class="field">
+                    <label>Nombre completo</label>
+                    <input pInputText formControlName="fullName" placeholder="Ej: Juan Pérez" />
+                    <small class="error" *ngIf="form.controls['fullName'].touched && form.controls['fullName'].invalid">
+                        Nombre completo obligatorio.
                     </small>
                 </div>
 
                 <!-- Email -->
-                <div class="field">
+                <div class="field full-width">
                     <label>Email</label>
                     <input pInputText type="email" formControlName="email" placeholder="correo@ejemplo.com" />
                     <small class="error" *ngIf="form.controls['email'].touched && form.controls['email'].invalid">
@@ -23,75 +32,37 @@
                     </small>
                 </div>
 
-                <!-- Nombre completo -->
-                <div class="field">
-                    <label>Nombre completo</label>
-                    <input pInputText formControlName="fullName" placeholder="Nombre Apellido" />
-                    <small class="error" *ngIf="form.controls['fullName'].touched && form.controls['fullName'].invalid">
-                        Nombre completo obligatorio.
-                    </small>
-                </div>
-
-                <!-- Dirección -->
-                <div class="field">
-                    <label>Dirección</label>
-                    <input pInputText formControlName="address" placeholder="Calle, número, colonia" />
-                    <small class="error" *ngIf="form.controls['address'].touched && form.controls['address'].invalid">
-                        Dirección obligatoria.
-                    </small>
-                </div>
-
-                <!-- Teléfono -->
-                <div class="field">
-                    <label>Teléfono</label>
-                    <input pInputText formControlName="phone" pKeyFilter="int" placeholder="Solo números"
-                        maxlength="10" />
-                    <small class="error" *ngIf="form.controls['phone'].touched && form.controls['phone'].invalid">
-                        Teléfono válido (solo números, mínimo 10 dígitos).
-                    </small>
-                </div>
-
-                <!-- Fecha de nacimiento -->
-                <div class="field">
-                    <label>Fecha de nacimiento</label>
-                    <p-datepicker formControlName="birthDate" [showIcon]="true" dateFormat="dd/mm/yy"></p-datepicker>
-
-                    <small class="error"
-                        *ngIf="form.controls['birthDate'].touched && form.controls['birthDate'].invalid">
-                        Debes ser mayor de edad.
-                    </small>
-                </div>
-
                 <!-- Contraseña -->
                 <div class="field">
                     <label>Contraseña</label>
-                    <p-password formControlName="password" [toggleMask]="true"></p-password>
-
-                    <small class="hint">
-                        Mínimo 10 caracteres y al menos 1 símbolo especial (! @ # $ % etc.).
-                    </small>
-
+                    <p-password formControlName="password" [toggleMask]="true" [feedback]="false" placeholder="Contraseña"></p-password>
                     <small class="error" *ngIf="form.controls['password'].touched && form.controls['password'].invalid">
-                        Contraseña inválida.
+                        Mínimo 6 caracteres.
                     </small>
                 </div>
 
                 <!-- Confirmar contraseña -->
                 <div class="field">
                     <label>Confirmar contraseña</label>
-                    <p-password formControlName="confirmPassword" [toggleMask]="true" [feedback]="false"></p-password>
-
-                    <small class="error" *ngIf="form.touched && form.errors?.['passwordMismatch']">
+                    <p-password formControlName="confirmPassword" [toggleMask]="true" [feedback]="false" placeholder="Repite contraseña"></p-password>
+                    <small class="error" *ngIf="form.touched && form.errors?.['mismatch']">
                         Las contraseñas no coinciden.
                     </small>
                 </div>
 
             </div>
 
-            <!-- Botón -->
-            <button pButton type="submit" label="Registrarse" class="w-full" [disabled]="form.invalid"
-                [loading]="loading">
-            </button>
+            <!-- Botones -->
+            <div class="form-actions" style="margin-top: 1rem;">
+                <button pButton type="submit" label="Crear mi cuenta" class="p-button-lg" style="width: 100%;" [disabled]="form.invalid"
+                    [loading]="loading">
+                </button>
+
+                <div class="login-link" style="text-align: center; margin-top: 1rem; color: #64748b; font-size: 0.9rem;">
+                    <span>¿Ya tienes cuenta?</span>
+                    <a routerLink="/login" style="margin-left: 0.5rem; color: #14b8a6; font-weight: 600; text-decoration: none;">Ir al Login</a>
+                </div>
+            </div>
 
         </form>
     </p-card>

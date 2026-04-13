@@ -1,0 +1,102 @@
+<p-toast></p-toast>
+
+<div class="page-container">
+  <!-- Header -->
+  <header class="page-header">
+    <div>
+      <h2>Grupos</h2>
+      <p>Selecciona un grupo para ver y gestionar sus tickets en el tablero Kanban.</p>
+    </div>
+    <p-button icon="pi pi-refresh" [text]="true" [rounded]="true"
+      pTooltip="Recargar" (onClick)="loadGroups()">
+    </p-button>
+  </header>
+
+  <!-- Skeletons -->
+  <div *ngIf="loading()" class="groups-grid">
+    <div *ngFor="let s of skeletons" class="group-card-skeleton">
+      <p-skeleton height="180px" borderRadius="12px"></p-skeleton>
+    </div>
+  </div>
+
+  <!-- Grid de grupos -->
+  <div *ngIf="!loading()" class="groups-grid">
+
+    <div *ngFor="let group of groups()" class="group-card">
+
+      <!-- Card Header -->
+      <div class="card-top">
+        <div class="group-icon">
+          <i class="pi pi-sitemap"></i>
+        </div>
+        <div class="group-meta">
+          <h3>{{ group.name }}</h3>
+          <p>{{ group.description }}</p>
+        </div>
+        <p-tag [value]="group.totalTickets + ' tickets'"
+          [severity]="group.totalTickets > 0 ? 'info' : 'secondary'"
+          [rounded]="true">
+        </p-tag>
+      </div>
+
+      <!-- Barra de progreso de completado -->
+      <div class="progress-section">
+        <div class="progress-label">
+          <span>Completado</span>
+          <strong>{{ completionRate(group) }}%</strong>
+        </div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill"
+            [style.width.%]="completionRate(group)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribución de estados -->
+      <div class="status-strip">
+        <div class="status-pill pend">
+          <span class="pill-dot"></span>
+          <span>{{ group.pendiente }}</span>
+          <span class="pill-label">Pendiente</span>
+        </div>
+        <div class="status-pill prog">
+          <span class="pill-dot"></span>
+          <span>{{ group.enProgreso }}</span>
+          <span class="pill-label">En progreso</span>
+        </div>
+        <div class="status-pill rev">
+          <span class="pill-dot"></span>
+          <span>{{ group.revision }}</span>
+          <span class="pill-label">Revisión</span>
+        </div>
+        <div class="status-pill done">
+          <span class="pill-dot"></span>
+          <span>{{ group.hecho }}</span>
+          <span class="pill-label">Hecho</span>
+        </div>
+        <div class="status-pill block">
+          <span class="pill-dot"></span>
+          <span>{{ group.bloqueado }}</span>
+          <span class="pill-label">Bloqueado</span>
+        </div>
+      </div>
+
+      <!-- Acción -->
+      <div class="card-footer">
+        <p-button
+          label="Ver Kanban"
+          icon="pi pi-objects-column"
+          styleClass="w-full"
+          (onClick)="openKanban(group.id)">
+        </p-button>
+      </div>
+    </div>
+
+    <!-- Estado vacío -->
+    <div *ngIf="groups().length === 0" class="empty-state">
+      <i class="pi pi-sitemap"></i>
+      <h3>No hay grupos</h3>
+      <p>Crea grupos desde la base de datos de Supabase para empezar.</p>
+    </div>
+  </div>
+</div>

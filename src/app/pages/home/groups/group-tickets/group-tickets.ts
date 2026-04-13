@@ -1,7 +1,8 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { CdkDragDrop, DragDropModule, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { DragDropModule } from 'primeng/dragdrop';
 
 import { SelectModule } from 'primeng/select';
 import { ButtonModule } from 'primeng/button';
@@ -13,117 +14,85 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TextareaModule } from 'primeng/textarea';
 import { TableModule } from 'primeng/table';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { ToastModule } from 'primeng/toast';
+import { SkeletonModule } from 'primeng/skeleton';
+import { MessageService } from 'primeng/api';
 
-import { AuthService } from '../../../../services/auth.service';
+import { AuthService, DbUser } from '../../../../services/auth.service';
+import { PermissionService } from '../../../../services/permission.service';
+import { TicketService, TicketItem, TicketState, PriorityLevel } from '../../../../services/ticket.service';
+import { HasPermissionDirective } from '../../../../directives/has-permission/has-permission.directive';
 
-export interface TicketComment {
-  author: string;
-  text: string;
-  date: string;
-}
-
-export interface TicketHistory {
-  actor: string;
-  action: string;
-  date: string;
-}
-
-export type PriorityLevel = 'Urgente' | 'Alta' | 'Media Alta' | 'Media' | 'Media Baja' | 'Baja' | 'Muy Baja';
-
-interface GroupItem {
-  id: string;
-  nombre: string;
-}
-
-interface TicketItem {
-  id: string;
-  groupId: string;
-  title: string;
-  state: 'Pendiente' | 'En progreso' | 'Revisión' | 'Hecho' | 'Bloqueado';
-  createdBy: string;
-  assignee: string;
-  priority: PriorityLevel;
-  createdAt: string;
-  description?: string;
-  dueDate?: string;
-  llmModel?: string;
-  comments: TicketComment[];
-  history: TicketHistory[];
-}
+interface GroupItem { id: string; nombre: string; }
 
 @Component({
   selector: 'app-group-tickets',
   standalone: true,
   imports: [
-    CommonModule,
-    FormsModule,
-    DragDropModule,
-    SelectModule,
-    ButtonModule,
-    CardModule,
-    TagModule,
-    AvatarModule,
-    DialogModule,
-    InputTextModule,
-    TextareaModule,
-    TableModule,
-    SelectButtonModule
+    CommonModule, FormsModule, RouterModule, DragDropModule,
+    SelectModule, ButtonModule, CardModule, TagModule, AvatarModule,
+    DialogModule, InputTextModule, TextareaModule, TableModule,
+    SelectButtonModule, ToastModule, SkeletonModule, HasPermissionDirective,
   ],
+  providers: [MessageService],
   templateUrl: './group-tickets.html',
   styleUrls: ['./group-tickets.css'],
 })
 export class GroupTickets implements OnInit {
-  private auth = inject(AuthService);
-  currentUser = this.auth.currentUser()!;
+  private auth       = inject(AuthService);
+  private permSvc    = inject(PermissionService);
+  private ticketSvc  = inject(TicketService);
+  private route      = inject(ActivatedRoute);
+  private router     = inject(Router);
+  private msgService = inject(MessageService);
 
-  groups: GroupItem[] = [
-    { id: 'G-001', nombre: 'Administradores' },
-    { id: 'G-002', nombre: 'Ventas' },
-    { id: 'G-003', nombre: 'Soporte' },
-    { id: 'G-004', nombre: 'Desarrollo' }
-  ];
+  currentUser = this.auth.currentUser;
 
-  selectedGroup: GroupItem | null = null;
+  // ── Estado de carga ──────────────────────────────────────────────────────────
+  loading = signal(true);
 
-  allTickets: TicketItem[] = [
-    { id: 'TCK-001', groupId: 'G-004', title: 'Fix login bug', state: 'Pendiente', createdBy: 'pansotic29@gmail.com', assignee: 'pansotic29@gmail.com', priority: 'Urgente', createdAt: '2026-03-09', comments: [], history: [{ actor: 'pansotic29@gmail.com', action: 'Creado', date: '2026-03-09T09:00:00Z' }] },
-    { id: 'TCK-002', groupId: 'G-002', title: 'Update CRM profile', state: 'En progreso', createdBy: 'pansotic29@gmail.com', assignee: 'ventas@ejemplo.com', priority: 'Media', createdAt: '2026-03-08', comments: [], history: [] },
-    { id: 'TCK-003', groupId: 'G-004', title: 'Design new dashboard', state: 'Revisión', createdBy: 'usuario@ejemplo.com', assignee: 'pansotic29@gmail.com', priority: 'Baja', createdAt: '2026-03-01', comments: [], history: [] },
-    { id: 'TCK-004', groupId: 'G-003', title: 'Support client login issue', state: 'Hecho', createdBy: 'soporte@ejemplo.com', assignee: 'soporte@ejemplo.com', priority: 'Media Alta', createdAt: '2026-02-25', comments: [], history: [] },
-    { id: 'TCK-005', groupId: 'G-004', title: 'Investigate DB slow queries', state: 'Bloqueado', createdBy: 'pansotic29@gmail.com', assignee: 'pansotic29@gmail.com', priority: 'Urgente', createdAt: '2026-03-09', comments: [], history: [] },
-    { id: 'TCK-006', groupId: 'G-001', title: 'Add new user permissions', state: 'Pendiente', createdBy: 'admin@ejemplo.com', assignee: 'admin@ejemplo.com', priority: 'Media', createdAt: '2026-03-10', comments: [], history: [] },
-    { id: 'TCK-007', groupId: 'G-003', title: 'Network outage report', state: 'En progreso', createdBy: 'pansotic29@gmail.com', assignee: 'soporte@ejemplo.com', priority: 'Alta', createdAt: '2026-03-10', comments: [], history: [] }
-  ];
+  // ── Grupo cargado desde la ruta ──────────────────────────────────────────────
+  selectedGroup = signal<GroupItem | null>(null);
 
-  pendiente: TicketItem[] = [];
-  enProgreso: TicketItem[] = [];
-  revision: TicketItem[] = [];
-  hecho: TicketItem[] = [];
-  bloqueado: TicketItem[] = [];
+  // ── Tickets de Supabase ──────────────────────────────────────────────────────
+  allTickets = signal<TicketItem[]>([]);
 
-  connectedLists = ['pendienteList', 'enProgresoList', 'revisionList', 'hechoList', 'bloqueadoList'];
+  // ── Columnas Kanban derivadas ────────────────────────────────────────────────
+  pendiente  = signal<TicketItem[]>([]);
+  enProgreso = signal<TicketItem[]>([]);
+  revision   = signal<TicketItem[]>([]);
+  hecho      = signal<TicketItem[]>([]);
+  bloqueado  = signal<TicketItem[]>([]);
 
-  stateOptions = [
-    { label: 'Pendiente', value: 'Pendiente' },
-    { label: 'En progreso', value: 'En progreso' },
-    { label: 'Revisión', value: 'Revisión' },
-    { label: 'Hecho', value: 'Hecho' },
-    { label: 'Bloqueado', value: 'Bloqueado' }
-  ];
+  // ── Miembros del grupo (para dropdown "Asignado a") ─────────────────────
+  groupMembers = signal<DbUser[]>([]);
+  memberOptions = computed(() => [
+    { label: '— Sin asignar —', value: '' },
+    ...this.groupMembers().map(u => ({ label: `${u.full_name} (${u.email})`, value: u.id }))
+  ]);
 
-  priorityOptions = [
-    { label: 'Urgente', value: 'Urgente' },
-    { label: 'Alta', value: 'Alta' },
-    { label: 'Media Alta', value: 'Media Alta' },
-    { label: 'Media', value: 'Media' },
-    { label: 'Media Baja', value: 'Media Baja' },
-    { label: 'Baja (Baja)', value: 'Baja (Baja)' },
-    { label: 'Muy Baja (Muy Baja)', value: 'Muy Baja (Muy Baja)' }
-  ];
 
+  activeFilter: 'Mis tickets' | 'Sin asignar' | 'Prioridad Alta' | null = null;
+
+  get totalTickets(): number {
+    return this.pendiente().length + this.enProgreso().length +
+           this.revision().length + this.hecho().length + this.bloqueado().length;
+  }
+
+  get filteredGroupTickets(): TicketItem[] {
+    let list = [...this.allTickets()];
+    const userId = this.currentUser()?.id ?? '';
+    if (this.activeFilter === 'Mis tickets')  list = list.filter(t => t.assignee === userId);
+    if (this.activeFilter === 'Sin asignar')  list = list.filter(t => !t.assignee);
+    if (this.activeFilter === 'Prioridad Alta') list = list.filter(t => t.priority === 'Urgente' || t.priority === 'Alta');
+    return list;
+  }
+
+  stateOptions    = ['Pendiente','En progreso','Revisión','Hecho','Bloqueado'].map(v => ({ label: v, value: v }));
+  priorityOptions = ['Urgente','Alta','Media Alta','Media','Media Baja','Baja','Muy Baja'].map(v => ({ label: v, value: v }));
   viewModeOptions = [
     { label: 'Tablero', value: 'kanban', icon: 'pi pi-objects-column' },
-    { label: 'Lista', value: 'list', icon: 'pi pi-list' }
+    { label: 'Lista',   value: 'list',   icon: 'pi pi-list' }
   ];
   viewMode: 'kanban' | 'list' = 'kanban';
 
@@ -133,163 +102,151 @@ export class GroupTickets implements OnInit {
   editDialogVisible = false;
   selectedTicket: TicketItem | null = null;
   editingTicket: Partial<TicketItem> = {};
-  newCommentText: string = '';
-  private originalStateForEdit: any = {};
+  newCommentText = '';
 
-  get canEditFull(): boolean {
-    if (!this.selectedTicket) return false;
-    return this.currentUser.email === this.selectedTicket.createdBy;
-  }
-
-  get canEditStatusOnly(): boolean {
-    if (!this.selectedTicket) return false;
-    return this.currentUser.email === this.selectedTicket.assignee && !this.canEditFull;
-  }
-
-  ngOnInit() { }
-
-  onGroupChange() {
-    this.refreshGroupTickets();
-  }
-
-  get totalTickets() {
-    if (!this.selectedGroup) return 0;
-    return this.pendiente.length + this.enProgreso.length + this.revision.length + this.hecho.length + this.bloqueado.length;
-  }
-
-  activeFilter: 'Mis tickets' | 'Sin asignar' | 'Prioridad Alta' | null = null;
-
-  get filteredGroupTickets() {
-    if (!this.selectedGroup) return [];
-    let list = this.allTickets.filter(t => t.groupId === this.selectedGroup!.id);
-    if (this.activeFilter === 'Mis tickets') {
-      list = list.filter(t => t.assignee === this.currentUser.email);
-    } else if (this.activeFilter === 'Sin asignar') {
-      list = list.filter(t => !t.assignee);
-    } else if (this.activeFilter === 'Prioridad Alta') {
-      list = list.filter(t => t.priority === 'Urgente' || t.priority === 'Alta');
+  // ── Lifecycle ────────────────────────────────────────────────────────────────
+  async ngOnInit() {
+    const groupId = this.route.snapshot.paramMap.get('groupId');
+    if (groupId) {
+      // Cargamos los grupos reales para obtener el nombre.
+      const groupsRes = await this.auth.getGroups();
+      const groups = groupsRes.data ?? [];
+      const found = groups.find(g => g.id === groupId);
+      if (found) {
+        this.selectedGroup.set({ id: found.id, nombre: found.name });
+      } else {
+        this.selectedGroup.set({ id: groupId, nombre: groupId });
+      }
+      await this.loadTickets(groupId);
+      await this.loadGroupMembers(groupId);
     }
-    return list;
+    this.loading.set(false);
+  }
+
+  // ── Cargar miembros del grupo ────────────────────────────────────────────────
+  private async loadGroupMembers(groupId: string) {
+    const res = await this.auth.getUsers();
+    const allUsers = res.data ?? [];
+    this.groupMembers.set(allUsers.filter(u => u.group_id === groupId));
+  }
+
+  // ── Cargar tickets de Supabase ───────────────────────────────────────────────
+  async loadTickets(groupId: string) {
+    this.loading.set(true);
+    const response = await this.ticketSvc.getTicketsByGroup(groupId);
+
+    if (response.statusCode === 200 && response.data) {
+      this.allTickets.set(response.data);
+      this.distributeTickets(response.data);
+    } else {
+      this.allTickets.set([]);
+      this.distributeTickets([]);
+      if (response.statusCode === 403) {
+        this.msgService.add({
+          severity: 'warn', summary: 'Sin permisos',
+          detail: 'No tienes acceso a los tickets de este grupo.', life: 4000
+        });
+      }
+    }
+    this.loading.set(false);
+  }
+
+  private distributeTickets(tickets: TicketItem[]) {
+    const filtered = this.applyFilter(tickets);
+    this.pendiente.set(filtered.filter(t => t.state === 'Pendiente'));
+    this.enProgreso.set(filtered.filter(t => t.state === 'En progreso'));
+    this.revision.set(filtered.filter(t => t.state === 'Revisión'));
+    this.hecho.set(filtered.filter(t => t.state === 'Hecho'));
+    this.bloqueado.set(filtered.filter(t => t.state === 'Bloqueado'));
+  }
+
+  private applyFilter(tickets: TicketItem[]): TicketItem[] {
+    const userId = this.currentUser()?.id ?? '';
+    if (this.activeFilter === 'Mis tickets')    return tickets.filter(t => t.assignee === userId);
+    if (this.activeFilter === 'Sin asignar')    return tickets.filter(t => !t.assignee);
+    if (this.activeFilter === 'Prioridad Alta') return tickets.filter(t => t.priority === 'Urgente' || t.priority === 'Alta');
+    return tickets;
   }
 
   setFilter(filter: 'Mis tickets' | 'Sin asignar' | 'Prioridad Alta' | null) {
     this.activeFilter = filter;
-    this.refreshGroupTickets();
+    this.distributeTickets(this.allTickets());
   }
 
-  refreshGroupTickets() {
-    if (!this.selectedGroup) {
-      this.pendiente = [];
-      this.enProgreso = [];
-      this.revision = [];
-      this.hecho = [];
-      this.bloqueado = [];
+  // ── Drag & Drop – PrimeNG (p-dragdrop) ──────────────
+  draggedTicket: TicketItem | null = null;
+
+  dragStart(ticket: TicketItem) {
+    this.draggedTicket = ticket;
+  }
+
+  dragEnd() {
+    this.draggedTicket = null;
+  }
+
+  async drop(newState: TicketState) {
+    if (!this.draggedTicket) return;
+    const ticket = this.draggedTicket;
+    
+    if (ticket.state === newState) {
+      this.draggedTicket = null;
       return;
     }
 
-    const groupTickets = this.filteredGroupTickets;
+    const oldState = ticket.state;
+    ticket.state = newState; // Optimistic visually
 
-    this.pendiente = groupTickets.filter(t => t.state === 'Pendiente');
-    this.enProgreso = groupTickets.filter(t => t.state === 'En progreso');
-    this.revision = groupTickets.filter(t => t.state === 'Revisión');
-    this.hecho = groupTickets.filter(t => t.state === 'Hecho');
-    this.bloqueado = groupTickets.filter(t => t.state === 'Bloqueado');
-  }
+    // Persistir en Supabase — moveTicket valida permiso + ownership
+    const result = await this.ticketSvc.moveTicket(ticket.id, newState, ticket.assignee);
 
-  drop(event: CdkDragDrop<TicketItem[]>) {
-    if (event.previousContainer === event.container) {
-      moveItemInArray(event.container.data, event.previousIndex, event.currentIndex);
+    if (result.statusCode !== 200) {
+      // Revertir si falla
+      ticket.state = oldState;
+      const detail = result.intOpCode === 'SxTI403_OWNER'
+        ? 'Solo puedes mover tickets asignados a ti.'
+        : result.statusCode === 403
+          ? 'No tienes permiso para cambiar estado de tickets.'
+          : 'Error de servidor al actualizar estado.';
+
+      this.msgService.add({ severity: 'error', summary: 'Movimiento bloqueado', detail, life: 4000 });
     } else {
-      const ticket = event.previousContainer.data[event.previousIndex];
-      const oldState = ticket.state;
-
-      transferArrayItem(
-        event.previousContainer.data,
-        event.container.data,
-        event.previousIndex,
-        event.currentIndex
-      );
-
-      const newStatusId = event.container.id;
-
-      let newState: TicketItem['state'] = 'Pendiente';
-      if (newStatusId === 'pendienteList') newState = 'Pendiente';
-      else if (newStatusId === 'enProgresoList') newState = 'En progreso';
-      else if (newStatusId === 'revisionList') newState = 'Revisión';
-      else if (newStatusId === 'hechoList') newState = 'Hecho';
-      else if (newStatusId === 'bloqueadoList') newState = 'Bloqueado';
-
-      ticket.state = newState;
-
-      if (oldState !== newState) {
-        if (!ticket.history) ticket.history = [];
-        ticket.history.unshift({
-          actor: this.currentUser.email,
-          action: `Movido en tablero de ${oldState} a ${ticket.state}`,
-          date: new Date().toISOString()
-        });
-      }
-
-      // Update in the master list as well
-      const index = this.allTickets.findIndex(t => t.id === ticket.id);
-      if (index !== -1) {
-        this.allTickets[index].state = newState;
-      }
+      this.distributeTickets(this.allTickets()); // Redistribuir visualmente
+      this.msgService.add({ severity: 'success', summary: 'Estado actualizado',
+        detail: `"${ticket.title}" → ${newState}`, life: 2500 });
     }
+    
+    this.draggedTicket = null;
   }
 
+  // ── Abrir ticket ─────────────────────────────────────────────────────────────
   openTicket(ticket: TicketItem) {
     this.selectedTicket = ticket;
-    this.editingTicket = JSON.parse(JSON.stringify(ticket));
-    this.originalStateForEdit = { ...ticket };
+    this.editingTicket = { ...ticket };
     this.newCommentText = '';
     this.editDialogVisible = true;
   }
 
-  addComment() {
-    if (!this.newCommentText.trim() || !this.editingTicket) return;
-    const comment: TicketComment = {
-      author: this.currentUser.email,
-      text: this.newCommentText,
-      date: new Date().toISOString()
-    };
-    if (!this.editingTicket.comments) this.editingTicket.comments = [];
-    this.editingTicket.comments.push(comment);
-    this.newCommentText = '';
-  }
+  // ── Guardar cambios del ticket (Supabase) ────────────────────────────────────
+  async saveTicket() {
+    if (!this.selectedTicket) return;
 
-  saveTicket() {
-    if (this.selectedTicket) {
-      const now = new Date().toISOString();
-      const changes: string[] = [];
+    const changes: Partial<TicketItem> = {};
+    if (this.editingTicket.title       !== this.selectedTicket.title)       changes.title       = this.editingTicket.title;
+    if (this.editingTicket.description !== this.selectedTicket.description) changes.description = this.editingTicket.description;
+    if (this.editingTicket.state       !== this.selectedTicket.state)       changes.state       = this.editingTicket.state;
+    if (this.editingTicket.priority    !== this.selectedTicket.priority)    changes.priority    = this.editingTicket.priority;
 
-      if (this.originalStateForEdit.state !== this.editingTicket.state) {
-        changes.push(`Estado de ${this.originalStateForEdit.state} a ${this.editingTicket.state}`);
+    if (Object.keys(changes).length > 0) {
+      const result = await this.ticketSvc.updateTicket(this.selectedTicket.id, changes);
+      if (result.statusCode === 200) {
+        Object.assign(this.selectedTicket, changes);
+        this.distributeTickets(this.allTickets());
+        this.msgService.add({ severity: 'success', summary: 'Guardado', detail: 'Ticket actualizado.', life: 2500 });
+      } else {
+        this.msgService.add({ severity: 'error', summary: 'Error', detail: 'No se pudo guardar.', life: 3000 });
       }
-      if (this.originalStateForEdit.assignee !== this.editingTicket.assignee) {
-        changes.push(`Asignado cambiado a ${this.editingTicket.assignee}`);
-      }
-      if (this.originalStateForEdit.priority !== this.editingTicket.priority) {
-        changes.push(`Prioridad de ${this.originalStateForEdit.priority} a ${this.editingTicket.priority}`);
-      }
-
-      if (changes.length > 0) {
-        if (!this.editingTicket.history) this.editingTicket.history = [];
-        this.editingTicket.history.unshift({
-          actor: this.currentUser.email,
-          action: changes.join(', '),
-          date: now
-        });
-      }
-
-      Object.assign(this.selectedTicket, this.editingTicket);
-      // Sync master list
-      const index = this.allTickets.findIndex(t => t.id === this.selectedTicket!.id);
-      if (index !== -1) {
-        this.allTickets[index] = this.selectedTicket;
-      }
-      this.refreshGroupTickets();
     }
+
     this.editDialogVisible = false;
     this.selectedTicket = null;
   }
@@ -299,58 +256,88 @@ export class GroupTickets implements OnInit {
     this.selectedTicket = null;
   }
 
-  getPrioritySeverity(priority: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {
-    if (priority === 'Urgente') return 'danger';
-    if (priority === 'Alta') return 'danger';
-    if (priority === 'Media Alta') return 'warn';
-    if (priority === 'Media') return 'warn';
-    if (priority === 'Media Baja') return 'info';
-    if (priority === 'Baja') return 'success';
-    if (priority === 'Muy Baja') return 'secondary';
-    return 'info';
+  // ── Eliminar ticket (Supabase) ───────────────────────────────────────────────
+  async deleteTicket() {
+    if (!this.selectedTicket) return;
+    const result = await this.ticketSvc.deleteTicket(this.selectedTicket.id);
+    if (result.statusCode === 200 || result.statusCode === 204) {
+      this.allTickets.update(list => list.filter(t => t.id !== this.selectedTicket!.id));
+      this.distributeTickets(this.allTickets());
+      this.msgService.add({ severity: 'success', summary: 'Ticket eliminado', life: 2500 });
+    }
+    this.editDialogVisible = false;
+    this.selectedTicket = null;
   }
 
-  formatDate(isoString: string): string {
-    const d = new Date(isoString);
-    return d.toLocaleString();
-  }
-
+  // ── Crear ticket (Supabase) ──────────────────────────────────────────────────
   createTicket() {
-    if (!this.selectedGroup) return;
+    const g = this.selectedGroup();
+    if (!g) return;
     this.newTicket = {
-      title: '',
-      description: '',
-      state: 'Pendiente',
-      assignee: this.currentUser.email,
-      priority: 'Media',
-      createdAt: new Date().toISOString().split('T')[0],
-      groupId: this.selectedGroup.id
+      title: '', description: '', state: 'Pendiente',
+      priority: 'Media', groupId: g.id,
     };
     this.createDialogVisible = true;
   }
 
-  confirmCreateTicket() {
-    if (!this.newTicket.title || !this.selectedGroup) return;
+  async confirmCreateTicket() {
+    if (!this.newTicket.title || !this.selectedGroup()) return;
+    this.newTicket.groupId = this.selectedGroup()!.id;
 
-    const created: TicketItem = {
-      id: `TCK-${Math.floor(Math.random() * 900) + 100}`,
-      groupId: this.selectedGroup.id,
-      title: this.newTicket.title || 'Nuevo Ticket',
-      state: this.newTicket.state as any || 'Pendiente',
-      createdBy: this.currentUser.email,
-      assignee: this.newTicket.assignee || '',
-      priority: this.newTicket.priority as any || 'Media',
-      createdAt: new Date().toISOString().split('T')[0],
-      description: this.newTicket.description,
-      comments: [],
-      history: [{ actor: this.currentUser.email, action: 'Ticket creado', date: new Date().toISOString() }]
-    };
+    const result = await this.ticketSvc.createTicket(this.newTicket);
+    if (result.statusCode === 201 && result.data) {
+      this.allTickets.update(list => [result.data!, ...list]);
+      this.distributeTickets(this.allTickets());
+      this.createDialogVisible = false;
+      this.msgService.add({ severity: 'success', summary: 'Ticket creado',
+        detail: `"${result.data.title}"`, life: 2500 });
+      this.openTicket(result.data);
+    } else {
+      this.msgService.add({ severity: 'error', summary: 'Error al crear', detail: 'Verifica los datos.', life: 3000 });
+    }
+  }
 
-    this.allTickets = [created, ...this.allTickets];
-    this.createDialogVisible = false;
-    this.refreshGroupTickets();
+  addComment() {
+    // Comentarios locales por ahora (sin tabla separada en Supabase)
+    if (!this.newCommentText.trim() || !this.editingTicket) return;
+    this.newCommentText = '';
+  }
 
-    // Automatically open the detail view of the new ticket
-    this.openTicket(created);
+  // ── Helpers permisos ─────────────────────────────────────────────────────────
+  hasPermission(perm: string): boolean { return this.permSvc.hasPermission(perm); }
+
+  get canEditFull(): boolean        { return this.hasPermission('ticket:edit'); }
+  get canEditStatusOnly(): boolean  { return this.hasPermission('ticket:edit_state') || this.hasPermission('ticket:change_status'); }
+  get canDeleteTicket(): boolean    { return this.hasPermission('ticket:delete'); }
+  get canCreateTicket(): boolean    { return this.hasPermission('ticket:add') || this.hasPermission('ticket:create'); }
+  get canAssignTicket(): boolean    { return this.hasPermission('ticket:assign'); }
+
+  // ── Helpers UI ───────────────────────────────────────────────────────────────
+  getPrioritySeverity(priority: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {
+    if (priority === 'Urgente' || priority === 'Alta') return 'danger';
+    if (priority === 'Media Alta' || priority === 'Media') return 'warn';
+    if (priority === 'Media Baja') return 'info';
+    if (priority === 'Baja' || priority === 'Muy Baja') return 'success';
+    return 'info';
+  }
+
+  formatDate(isoString: string): string {
+    if (!isoString) return '';
+    return new Date(isoString).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  /** Inicial del asignado para el avatar. Resuelve UUID → nombre. */
+  assigneeLabel(assignee: string): string {
+    if (!assignee) return '?';
+    const member = this.groupMembers().find(u => u.id === assignee);
+    if (member) return member.full_name.charAt(0).toUpperCase();
+    return assignee.includes('@') ? assignee.charAt(0).toUpperCase() : '?';
+  }
+
+  /** Nombre completo del asignado. UUID → full_name */
+  assigneeName(assignee: string): string {
+    if (!assignee) return 'Sin asignar';
+    const member = this.groupMembers().find(u => u.id === assignee);
+    return member?.full_name ?? assignee;
   }
 }

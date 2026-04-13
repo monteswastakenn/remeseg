@@ -1,17 +1,22 @@
-<div class="page">
-    <header class="head">
-        <h1>Dashboard de Grupo</h1>
-        <p>Selecciona un grupo para ver un resumen de sus tickets.</p>
-    </header>
+<p-toast></p-toast>
 
-    <div class="dashboard-controls flex flex-column md:flex-row gap-3">
-        <div class="group-selector">
-            <span class="font-semibold text-color mr-2">Grupo activo:</span>
-            <p-select [options]="groups" [(ngModel)]="selectedGroup" optionLabel="nombre"
-                placeholder="Selecciona un grupo" (onChange)="onGroupChange()" class="w-16rem"></p-select>
+<div class="page-container">
+    <header class="header">
+        <div style="display: flex; align-items: center; gap: 1rem;">
+            <a routerLink="/home/groups" pButton type="button" icon="pi pi-arrow-left"
+                class="p-button-text p-button-secondary" title="Volver a Grupos"></a>
+            <div>
+                <h2 style="margin: 0;">
+                    <span style="color: var(--text-color-secondary); font-weight: 400; font-size: 1.2rem;">Grupos /</span>
+                    {{ selectedGroup()?.nombre || 'Cargando...' }}
+                </h2>
+                <p style="margin: 0; color: var(--text-color-secondary); font-size: 0.85rem;">
+                    Tablero de tickets del grupo
+                </p>
+            </div>
         </div>
 
-        <div class="flex gap-2 align-items-center mt-2 md:mt-0" *ngIf="selectedGroup">
+        <div class="flex gap-2 align-items-center" *ngIf="selectedGroup">
             <p-selectButton [options]="viewModeOptions" [(ngModel)]="viewMode" optionLabel="label" optionValue="value"
                 class="mr-3">
                 <ng-template let-item pTemplate>
@@ -19,12 +24,14 @@
                     <span>{{ item.label }}</span>
                 </ng-template>
             </p-selectButton>
-            <p-button label="Crear ticket" icon="pi pi-plus" (onClick)="createTicket()"></p-button>
+
+            <p-button *appHasPermission="'ticket:create'" label="Crear ticket" icon="pi pi-plus"
+                (onClick)="createTicket()"></p-button>
         </div>
-    </div>
+    </header>
 
     <!-- Módulo visible solo cuando hay un grupo seleccionado -->
-    <ng-container *ngIf="selectedGroup">
+    <ng-container *ngIf="selectedGroup()">
         <div class="filters mb-4 flex gap-2 overflow-x-auto pb-2">
             <p-button label="Todos" [rounded]="true" [severity]="activeFilter === null ? 'primary' : 'secondary'"
                 [outlined]="activeFilter !== null" (onClick)="setFilter(null)"></p-button>
@@ -39,56 +46,60 @@
                 [outlined]="activeFilter !== 'Prioridad Alta'" (onClick)="setFilter('Prioridad Alta')"></p-button>
         </div>
 
-        <div class="kanban-board" *ngIf="viewMode === 'kanban'">
-            <div class="summary-card">
+        <!-- Stats Strip -->
+        <div class="summary-cards" *ngIf="viewMode === 'kanban'">
+            <div class="summary-card card-total">
                 <div class="count">{{ totalTickets }}</div>
                 <div class="label">Total Tickets</div>
             </div>
-            <div class="summary-card">
-                <div class="count" style="color: var(--blue-500)">{{ pendiente.length }}</div>
+            <div class="summary-card card-pend">
+                <div class="count">{{ pendiente().length }}</div>
                 <div class="label">Pendientes</div>
             </div>
-            <div class="summary-card">
-                <div class="count" style="color: var(--yellow-500)">{{ enProgreso.length }}</div>
+            <div class="summary-card card-prog">
+                <div class="count">{{ enProgreso().length }}</div>
                 <div class="label">En progreso</div>
             </div>
-            <div class="summary-card">
-                <div class="count" style="color: var(--green-500)">{{ hecho.length }}</div>
+            <div class="summary-card card-rev">
+                <div class="count">{{ revision().length }}</div>
+                <div class="label">Revisión</div>
+            </div>
+            <div class="summary-card card-done">
+                <div class="count">{{ hecho().length }}</div>
                 <div class="label">Hecho</div>
             </div>
-            <div class="summary-card">
-                <div class="count" style="color: var(--red-500)">{{ bloqueado.length }}</div>
+            <div class="summary-card card-block">
+                <div class="count">{{ bloqueado().length }}</div>
                 <div class="label">Bloqueado</div>
             </div>
         </div>
 
         <!-- Tablero Kanban -->
-        <div class="kanban-board">
+        <div class="kanban-board" *ngIf="viewMode === 'kanban'">
 
             <!-- Pendiente -->
-            <div class="kanban-column">
+            <div class="kanban-column col-pendiente">
                 <h3 class="column-header">
                     Pendiente
                     <span class="column-count">{{ pendiente.length }}</span>
                 </h3>
-                <div cdkDropList id="pendienteList" [cdkDropListData]="pendiente"
-                    [cdkDropListConnectedTo]="connectedLists" class="kanban-list" (cdkDropListDropped)="drop($event)">
+                <div pDroppable="tickets" (onDrop)="drop('Pendiente')" class="kanban-list">
 
-                    <p-card *ngFor="let ticket of pendiente" cdkDrag class="kanban-card cursor-pointer"
+                    <p-card *ngFor="let ticket of pendiente()" pDraggable="tickets"
+                        (onDragStart)="dragStart(ticket)" (onDragEnd)="dragEnd()" class="kanban-card cursor-pointer"
                         (click)="openTicket(ticket)">
                         <ng-template pTemplate="header">
-                            <div class="card-header pt-3 px-3">
+                            <div class="card-header">
                                 <b class="text-sm">{{ ticket.title }}</b>
                                 <p-tag [value]="ticket.priority"
                                     [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                             </div>
                         </ng-template>
                         <div class="card-content">
-
                             <div class="row-details">
-                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt }}</span>
-                                <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
-                                    [title]="ticket.assignee"></p-avatar>
+                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt | date:'dd/MM/yy' }}</span>
+                                <p-avatar [label]="assigneeLabel(ticket.assignee)" shape="circle"
+                                    [title]="assigneeName(ticket.assignee)"></p-avatar>
                             </div>
                         </div>
                     </p-card>
@@ -96,29 +107,28 @@
             </div>
 
             <!-- En progreso -->
-            <div class="kanban-column">
+            <div class="kanban-column col-progreso">
                 <h3 class="column-header">
                     En progreso
                     <span class="column-count">{{ enProgreso.length }}</span>
                 </h3>
-                <div cdkDropList id="enProgresoList" [cdkDropListData]="enProgreso"
-                    [cdkDropListConnectedTo]="connectedLists" class="kanban-list" (cdkDropListDropped)="drop($event)">
+                <div pDroppable="tickets" (onDrop)="drop('En progreso')" class="kanban-list">
 
-                    <p-card *ngFor="let ticket of enProgreso" cdkDrag class="kanban-card cursor-pointer"
+                    <p-card *ngFor="let ticket of enProgreso()" pDraggable="tickets"
+                        (onDragStart)="dragStart(ticket)" (onDragEnd)="dragEnd()" class="kanban-card cursor-pointer"
                         (click)="openTicket(ticket)">
                         <ng-template pTemplate="header">
-                            <div class="card-header pt-3 px-3">
+                            <div class="card-header">
                                 <b class="text-sm">{{ ticket.title }}</b>
                                 <p-tag [value]="ticket.priority"
                                     [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                             </div>
                         </ng-template>
                         <div class="card-content">
-
                             <div class="row-details">
-                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt }}</span>
-                                <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
-                                    [title]="ticket.assignee"></p-avatar>
+                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt | date:'dd/MM/yy' }}</span>
+                                <p-avatar [label]="assigneeLabel(ticket.assignee)" shape="circle"
+                                    [title]="assigneeName(ticket.assignee)"></p-avatar>
                             </div>
                         </div>
                     </p-card>
@@ -126,29 +136,28 @@
             </div>
 
             <!-- Revisión -->
-            <div class="kanban-column">
+            <div class="kanban-column col-revision">
                 <h3 class="column-header">
                     Revisión
                     <span class="column-count">{{ revision.length }}</span>
                 </h3>
-                <div cdkDropList id="revisionList" [cdkDropListData]="revision"
-                    [cdkDropListConnectedTo]="connectedLists" class="kanban-list" (cdkDropListDropped)="drop($event)">
+                <div pDroppable="tickets" (onDrop)="drop('Revisión')" class="kanban-list">
 
-                    <p-card *ngFor="let ticket of revision" cdkDrag class="kanban-card cursor-pointer"
+                    <p-card *ngFor="let ticket of revision()" pDraggable="tickets"
+                        (onDragStart)="dragStart(ticket)" (onDragEnd)="dragEnd()" class="kanban-card cursor-pointer"
                         (click)="openTicket(ticket)">
                         <ng-template pTemplate="header">
-                            <div class="card-header pt-3 px-3">
+                            <div class="card-header">
                                 <b class="text-sm">{{ ticket.title }}</b>
                                 <p-tag [value]="ticket.priority"
                                     [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                             </div>
                         </ng-template>
                         <div class="card-content">
-
                             <div class="row-details">
-                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt }}</span>
-                                <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
-                                    [title]="ticket.assignee"></p-avatar>
+                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt | date:'dd/MM/yy' }}</span>
+                                <p-avatar [label]="assigneeLabel(ticket.assignee)" shape="circle"
+                                    [title]="assigneeName(ticket.assignee)"></p-avatar>
                             </div>
                         </div>
                     </p-card>
@@ -156,29 +165,28 @@
             </div>
 
             <!-- Hecho -->
-            <div class="kanban-column">
+            <div class="kanban-column col-hecho">
                 <h3 class="column-header">
                     Hecho
                     <span class="column-count">{{ hecho.length }}</span>
                 </h3>
-                <div cdkDropList id="hechoList" [cdkDropListData]="hecho" [cdkDropListConnectedTo]="connectedLists"
-                    class="kanban-list" (cdkDropListDropped)="drop($event)">
+                <div pDroppable="tickets" (onDrop)="drop('Hecho')" class="kanban-list">
 
-                    <p-card *ngFor="let ticket of hecho" cdkDrag class="kanban-card cursor-pointer"
+                    <p-card *ngFor="let ticket of hecho()" pDraggable="tickets"
+                        (onDragStart)="dragStart(ticket)" (onDragEnd)="dragEnd()" class="kanban-card cursor-pointer"
                         (click)="openTicket(ticket)">
                         <ng-template pTemplate="header">
-                            <div class="card-header pt-3 px-3">
+                            <div class="card-header">
                                 <b class="text-sm">{{ ticket.title }}</b>
                                 <p-tag [value]="ticket.priority"
                                     [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                             </div>
                         </ng-template>
                         <div class="card-content">
-
                             <div class="row-details">
-                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt }}</span>
-                                <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
-                                    [title]="ticket.assignee"></p-avatar>
+                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt | date:'dd/MM/yy' }}</span>
+                                <p-avatar [label]="assigneeLabel(ticket.assignee)" shape="circle"
+                                    [title]="assigneeName(ticket.assignee)"></p-avatar>
                             </div>
                         </div>
                     </p-card>
@@ -186,29 +194,28 @@
             </div>
 
             <!-- Bloqueado -->
-            <div class="kanban-column">
+            <div class="kanban-column col-bloqueado">
                 <h3 class="column-header">
                     Bloqueado
                     <span class="column-count">{{ bloqueado.length }}</span>
                 </h3>
-                <div cdkDropList id="bloqueadoList" [cdkDropListData]="bloqueado"
-                    [cdkDropListConnectedTo]="connectedLists" class="kanban-list" (cdkDropListDropped)="drop($event)">
+                <div pDroppable="tickets" (onDrop)="drop('Bloqueado')" class="kanban-list">
 
-                    <p-card *ngFor="let ticket of bloqueado" cdkDrag class="kanban-card cursor-pointer"
+                    <p-card *ngFor="let ticket of bloqueado()" pDraggable="tickets"
+                        (onDragStart)="dragStart(ticket)" (onDragEnd)="dragEnd()" class="kanban-card cursor-pointer"
                         (click)="openTicket(ticket)">
                         <ng-template pTemplate="header">
-                            <div class="card-header pt-3 px-3">
+                            <div class="card-header">
                                 <b class="text-sm">{{ ticket.title }}</b>
                                 <p-tag [value]="ticket.priority"
                                     [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
                             </div>
                         </ng-template>
                         <div class="card-content">
-
                             <div class="row-details">
-                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt }}</span>
-                                <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"
-                                    [title]="ticket.assignee"></p-avatar>
+                                <span class="date"><i class="pi pi-calendar"></i> {{ ticket.createdAt | date:'dd/MM/yy' }}</span>
+                                <p-avatar [label]="assigneeLabel(ticket.assignee)" shape="circle"
+                                    [title]="assigneeName(ticket.assignee)"></p-avatar>
                             </div>
                         </div>
                     </p-card>
@@ -254,70 +261,23 @@
                     <div class="flex gap-4">
                         <div class="flex-1 flex flex-column gap-2">
                             <label for="assignee">Asignado a</label>
-                            <input pInputText id="assignee" [(ngModel)]="editingTicket.assignee" class="w-full"
-                                [disabled]="!canEditFull" />
+                            <p-select [options]="memberOptions()" [(ngModel)]="editingTicket.assignee"
+                                optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full"
+                                placeholder="Selecciona un miembro"
+                                [disabled]="!canAssignTicket && !canEditFull"></p-select>
                         </div>
-                        <div class="flex-1 flex flex-column gap-2">
-                            <label for="dueDate">Fecha Límite</label>
-                            <input pInputText type="date" id="dueDate" [(ngModel)]="editingTicket.dueDate"
-                                class="w-full" [disabled]="!canEditFull" />
-                        </div>
-                    </div>
-
-                    <div class="flex flex-column gap-2 mt-2">
-                        <label for="llmModel">
-                            Modelo LLM <span class="text-color-secondary font-normal">(Opcional)</span>
-                        </label>
-                        <span class="p-input-icon-left w-full">
-                            <i class="pi pi-sparkles"></i>
-                            <input pInputText id="llmModel" [(ngModel)]="editingTicket.llmModel"
-                                placeholder="ej. gpt-4, claude-3" class="w-full pl-5" [disabled]="!canEditFull" />
-                        </span>
                     </div>
                 </div>
 
-                <!-- Columna Derecha: Comentarios e Historial -->
+                              <!-- Columna Derecha: Historial simple -->
                 <div
                     class="flex-1 flex flex-column gap-4 ticket-sidebar border-top-1 lg:border-top-none lg:border-left-1 surface-border pt-4 lg:pt-0 lg:pl-4">
-                    <!-- Comentarios -->
-                    <div class="comments-section flex flex-column gap-3">
-                        <h3 class="m-0 text-lg font-semibold border-bottom-1 surface-border pb-2">Comentarios</h3>
-                        <div class="comments-list flex flex-column gap-2">
-                            <div *ngIf="!editingTicket.comments?.length" class="text-xs text-color-secondary italic">No
-                                hay comentarios aún.</div>
-                            <div *ngFor="let c of editingTicket.comments" class="comment-bubble">
-                                <div
-                                    class="flex justify-content-between text-xs text-color-secondary mb-1 align-items-center">
-                                    <b class="text-color opacity-80">{{ c.author }}</b> <span
-                                        style="font-size: 0.65rem;">{{ formatDate(c.date) }}</span>
-                                </div>
-                                <div class="text-sm line-height-3">{{ c.text }}</div>
-                            </div>
-                        </div>
-
-                        <div class="flex gap-2 mt-2">
-                            <input pInputText placeholder="Escribe algo..." [(ngModel)]="newCommentText"
-                                class="w-full text-sm" (keyup.enter)="addComment()"
-                                [disabled]="!canEditFull && !canEditStatusOnly" />
-                            <p-button icon="pi pi-send" (onClick)="addComment()"
-                                [disabled]="!newCommentText || (!canEditFull && !canEditStatusOnly)"></p-button>
-                        </div>
-                    </div>
-
-                    <!-- Historial -->
-                    <div class="history-section flex flex-column gap-3 mt-2 flex-grow-1">
-                        <h3 class="m-0 text-lg font-semibold border-bottom-1 surface-border pb-2">Historial de cambios
-                        </h3>
-                        <div class="history-list flex flex-column gap-3 h-full">
-                            <div *ngIf="!editingTicket.history?.length" class="text-xs text-color-secondary italic">No
-                                hay registros de historial.</div>
-                            <div *ngFor="let h of editingTicket.history" class="history-item relative">
-                                <div class="history-dot"></div>
-                                <div class="text-xs text-color-secondary mb-1" style="font-size: 0.65rem;">{{
-                                    formatDate(h.date) }}</div>
-                                <div class="text-xs font-semibold">{{ h.actor }}</div>
-                                <div class="text-xs text-color-secondary mt-1">{{ h.action }}</div>
-                            </div>
+                    <div class="history-section flex flex-column gap-3">
+                        <h3 class="m-0 text-lg font-semibold border-bottom-1 surface-border pb-2">Info del Ticket</h3>
+                        <div class="flex flex-column gap-2">
+                            <div class="text-xs text-color-secondary">ID: <b>{{ selectedTicket?.id }}</b></div>
+                            <div class="text-xs text-color-secondary">Creado: <b>{{ selectedTicket?.createdAt | date:'dd/MM/yyyy HH:mm' }}</b></div>
+                            <div class="text-xs text-color-secondary">Grupo ID: <b>{{ selectedTicket?.groupId }}</b></div>
                         </div>
                     </div>
                 </div>
@@ -327,9 +287,16 @@
                 <span class="text-xs text-color-secondary mr-auto mt-2" *ngIf="selectedTicket">
                     Creado por: <b>{{selectedTicket.createdBy}}</b>
                 </span>
+
+                <!-- ✅ Botón Eliminar protegido con directiva -->
+                <p-button *appHasPermission="'ticket:delete'" label="Eliminar" icon="pi pi-trash" severity="danger"
+                    [text]="true" (onClick)="deleteTicket()"></p-button>
+
                 <p-button label="Descartar" icon="pi pi-times" [text]="true" severity="secondary"
                     (onClick)="cancelEdit()"></p-button>
-                <p-button label="Guardar" icon="pi pi-check" [text]="true" (onClick)="saveTicket()"></p-button>
+                <p-button label="Guardar" icon="pi pi-check" [text]="true"
+                    [disabled]="!canEditFull && !canEditStatusOnly"
+                    (onClick)="saveTicket()"></p-button>
             </ng-template>
         </p-dialog>
 
@@ -363,9 +330,10 @@
                 </div>
 
                 <div class="flex flex-column gap-2">
-                    <label for="newAssignee" class="font-semibold">Asignado a (Email)</label>
-                    <input pInputText id="newAssignee" [(ngModel)]="newTicket.assignee" placeholder="ejemplo@correo.com"
-                        class="w-full" />
+                    <label for="newAssignee" class="font-semibold">Asignado a</label>
+                    <p-select [options]="memberOptions()" [(ngModel)]="newTicket.assignee"
+                        optionLabel="label" optionValue="value" appendTo="body" styleClass="w-full"
+                        placeholder="Selecciona un miembro del grupo"></p-select>
                 </div>
             </div>
             <ng-template pTemplate="footer">
@@ -377,8 +345,8 @@
         </p-dialog>
     </ng-container>
 
-    <!-- Modo Lista (Moviéndolo dentro del contenedor para respetar el if del grupo) -->
-    <div class="list-view-container mt-4" *ngIf="selectedGroup && viewMode === 'list'">
+    <!-- Modo Lista -->
+    <div class="list-view-container mt-4" *ngIf="selectedGroup() && viewMode === 'list'">
         <p-table [value]="filteredGroupTickets" [rows]="10" [paginator]="true" styleClass="p-datatable-sm"
             responsiveLayout="scroll" [rowHover]="true" selectionMode="single" [(selection)]="selectedTicket"
             dataKey="id" (onRowSelect)="openTicket($any($event.data))" class="cursor-pointer">
@@ -404,11 +372,11 @@
                     </td>
                     <td>
                         <div class="flex align-items-center gap-2">
-                            <p-avatar [label]="ticket.assignee.charAt(0).toUpperCase()" shape="circle"></p-avatar>
+                            <p-avatar [label]="assigneeLabel(ticket.assignee)" shape="circle"></p-avatar>
                             <span>{{ticket.assignee}}</span>
                         </div>
                     </td>
-                    <td>{{ticket.dueDate || 'Sin límite'}}</td>
+                    <td>{{ ticket.createdAt | date:'dd/MM/yy' }}</td>
                 </tr>
             </ng-template>
             <ng-template pTemplate="emptymessage">
@@ -419,10 +387,10 @@
         </p-table>
     </div>
 
-    <div *ngIf="!selectedGroup" class="p-5 text-center text-500">
-        <i class="pi pi-users" style="font-size: 3rem; margin-bottom: 1rem; color: var(--surface-400)"></i>
-        <h3>Ningún grupo seleccionado</h3>
-        <p>Selecciona un grupo en la parte superior para visualizar sus métricas y tickets.</p>
+    <div *ngIf="!selectedGroup()" class="empty-state">
+        <i class="pi pi-sitemap"></i>
+        <h3>Grupo no encontrado</h3>
+        <p>El grupo solicitado no existe o no tienes acceso a él.</p>
     </div>
 
 </div>

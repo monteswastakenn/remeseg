@@ -1,32 +1,14 @@
 /* --- RESET Y ESTRUCTURA PRINCIPAL --- */
-.page {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow: hidden;
-    padding: 1.5rem 2rem;
-    background: transparent;
-}
+.page-container { max-width: 1400px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+.header h2 { margin: 0; font-size: 1.8rem; color: var(--text-color); }
 
-.head {
-    flex-shrink: 0;
-    margin-bottom: 1.5rem !important;
-}
-
-.head p-button {
+.header p-button {
     margin: 10px 0;
     margin-left: 10px;
 }
 
-.head h1 {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--text-color);
-    margin: 0 0 0.5rem 0;
-    letter-spacing: -0.5px;
-}
-
-.head p {
+.header p {
     color: var(--text-color-secondary);
     margin: 0;
 }
@@ -49,10 +31,11 @@
     flex: 0 0 340px;
     display: flex;
     flex-direction: column;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
+    background: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 6px;
     max-height: 100%;
+    border-top: 2px solid var(--primary-color);
 }
 
 .column-header {
@@ -80,17 +63,18 @@
 /* --- TARJETAS --- */
 ::ng-deep .kanban-card {
     background: var(--surface-card) !important;
-    border-radius: 8px !important;
+    border-radius: 4px !important;
     border: 1px solid var(--surface-border) !important;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2) !important;
-    transition: all 0.2s ease !important;
+    border-left: 3px solid var(--primary-color) !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
     cursor: grab !important;
 }
 
 ::ng-deep .kanban-card:hover {
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4) !important;
-    border-color: rgba(255, 255, 255, 0.2) !important;
-    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    border-left-color: var(--primary-color) !important;
+    transform: translateX(3px);
 }
 
 ::ng-deep .kanban-card:active {
@@ -130,7 +114,7 @@
 .row-details {
     margin-top: 0.75rem;
     padding-top: 0.75rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -146,19 +130,21 @@
 
 /* --- TAGS Y AVATAR --- */
 ::ng-deep .custom-llm-tag .p-tag {
-    background: linear-gradient(135deg, #6b4cff 0%, #aa64ff 100%) !important;
+    background: linear-gradient(135deg, #0d9488 0%, #06b6d4 100%) !important;
     color: white !important;
     font-size: 0.7rem !important;
     padding: 0.15rem 0.5rem !important;
-    border-radius: 6px !important;
+    border-radius: 3px !important;
     border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 ::ng-deep .p-avatar {
     width: 1.8rem !important;
     height: 1.8rem !important;
     font-size: 0.8rem !important;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* --- SCROLLBARS --- */
@@ -175,20 +161,20 @@
 
 .kanban-board::-webkit-scrollbar-thumb,
 .kanban-list::-webkit-scrollbar-thumb {
-    background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(0, 0, 0, 0.1);
     border-radius: 10px;
 }
 
 .kanban-board::-webkit-scrollbar-thumb:hover,
 .kanban-list::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: rgba(0, 0, 0, 0.2);
 }
 
 /* --- DRAG & DROP (CDK) --- */
 .cdk-drag-preview {
     box-sizing: border-box;
-    border-radius: 8px;
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
     opacity: 0.95;
     cursor: grabbing !important;
     background: var(--surface-card) !important;
@@ -198,7 +184,7 @@
 .cdk-drag-placeholder {
     opacity: 0.2;
     background-color: var(--surface-ground);
-    border: 2px dashed rgba(255, 255, 255, 0.3);
+    border: 2px dashed rgba(0, 0, 0, 0.15);
 }
 
 .cdk-drag-animating {
@@ -248,8 +234,8 @@
 ::ng-deep .p-dialog input.p-inputtext,
 ::ng-deep .p-dialog textarea.p-inputtext,
 ::ng-deep .p-dialog .p-select {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
     color: var(--text-color) !important;
     border-radius: 8px !important;
     padding: 0.6rem 0.75rem !important;
@@ -277,7 +263,7 @@
 
 /* Footer del modal */
 ::ng-deep .p-dialog .p-dialog-footer {
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
     padding: 1rem 1.5rem;
     display: flex;
     justify-content: flex-end;
@@ -290,9 +276,9 @@
 }
 
 .comment-bubble {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    background: #f8f9fa;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
     padding: 0.75rem;
     position: relative;
 }
@@ -304,13 +290,13 @@
     left: 20px;
     border-width: 6px 6px 0;
     border-style: solid;
-    border-color: rgba(255, 255, 255, 0.05) transparent transparent transparent;
+    border-color: #f8f9fa transparent transparent transparent;
     display: block;
     width: 0;
 }
 
 .history-list {
-    border-left: 2px solid rgba(255, 255, 255, 0.1);
+    border-left: 2px solid rgba(0, 0, 0, 0.1);
     padding-left: 1rem;
     margin-left: 0.5rem;
 }
@@ -328,7 +314,7 @@
     background-color: var(--primary-color);
     border-radius: 50%;
     border: 2px solid var(--surface-card);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.06);
 }
 
 .line-height-3 {

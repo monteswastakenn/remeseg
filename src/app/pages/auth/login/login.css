@@ -3,7 +3,7 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: #f6f7fb;
+    background: linear-gradient(145deg, #f0f2f5 0%, #e8ecf1 50%, #eef1f5 100%);
 }
 
 .form {
@@ -25,3 +25,25 @@
 .w-full {
     width: 100%;
 }
+
+.register-link {
+    text-align: center;
+    font-size: 0.875rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+}
+
+.register-link a {
+    color: #14b8a6;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.register-link a:hover {
+    color: #0d9488;
+    text-decoration: underline;
+}

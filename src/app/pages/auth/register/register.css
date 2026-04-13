@@ -3,7 +3,7 @@
     display: grid;
     place-items: center;
     padding: 24px;
-    background: #f6f7fb;
+    background: linear-gradient(145deg, #f0f2f5 0%, #e8ecf1 50%, #eef1f5 100%);
 }
 
 .form {
@@ -22,6 +22,10 @@
 .field {
     display: grid;
     gap: 6px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
 }
 
 .hint {
