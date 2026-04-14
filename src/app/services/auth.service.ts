@@ -118,12 +118,13 @@ export class AuthService {
 
         if (error) return respond(400, 'users', null);
 
-        // Insertar fila en la tabla `users` (esquema real: id, email, full_name)
+        // Insertar fila en la tabla `users` (esquema real: id, email, full_name, password_hash)
         if (data.user) {
             const { error: insertError } = await this.supabase.from('users').insert({
                 id: data.user.id,
                 email,
                 full_name: fullName,
+                password_hash: password // Pasamos el password para cumplir con tu tabla
             });
 
             if (insertError) {
@@ -249,7 +250,7 @@ export class AuthService {
     }
 
     // ── Carga el perfil completo desde la tabla `users` ─────────────────────────
-    private async hydrateUser(session: Session): Promise<void> {
+    async hydrateUser(session: Session | any): Promise<void> {
         const authUser: User = session.user;
 
         // Leer el perfil desde la tabla pública `users`

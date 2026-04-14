@@ -43,6 +43,8 @@ const RESOURCE_LABELS: Record<string, string> = {
     user: 'Usuarios',
 };
 
+import { PermissionService } from '../../../services/permission.service';
+
 @Component({
     selector: 'app-admin-users',
     standalone: true,
@@ -58,6 +60,7 @@ const RESOURCE_LABELS: Record<string, string> = {
 })
 export class AdminUsers implements OnInit {
     private auth       = inject(AuthService);
+    public permissions = inject(PermissionService);
     private confirmSvc = inject(ConfirmationService);
     private msg        = inject(MessageService);
 
@@ -197,15 +200,23 @@ export class AdminUsers implements OnInit {
     async togglePerm(perm: PermRow, field: 'can_view' | 'can_create' | 'can_edit' | 'can_delete') {
         if (!perm.id) return;
 
-        const newValue = !perm[field];
-        perm[field] = newValue;
+        // Como usamos [(ngModel)], p-toggleSwitch YA actualizó perm[field] con el nuevo valor.
+        const newValue = perm[field];
 
         const result = await this.auth.updatePermission(perm.id, { [field]: newValue });
         if (result.statusCode !== 200) {
-            perm[field] = !newValue; // revert
+            perm[field] = !newValue; // revertir en caso de error
             this.msg.add({ severity: 'error', summary: 'Error', detail: 'No se pudo actualizar el permiso.', life: 3000 });
         } else {
             this.msg.add({ severity: 'success', summary: 'Permiso actualizado', detail: `${perm.label}: ${field} → ${newValue ? 'Sí' : 'No'}`, life: 2000 });
+            
+            // Si el admin acaba de editar su PROPIO grupo, actualizamos sus permisos en vivo (Front-end reactivo)
+            const currentUser = this.auth.currentUser();
+            if (currentUser && currentUser.groupId === this.permDialogUser?.group_id) {
+                // inject PermissionService and call refresh
+                // Since PermissionService is easily injectable via inject() in class, let's just do it directly with a local import if needed, or re-hydrate via auth.
+                await this.auth.hydrateUser({ user: { id: currentUser.id, email: currentUser.email } } as any);
+            }
         }
     }
 

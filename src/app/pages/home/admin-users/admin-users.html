@@ -96,19 +96,23 @@
 
                     <!-- Acciones -->
                     <td class="col-actions">
-                        <p-button icon="pi pi-user-edit" [rounded]="true" [text]="true"
-                            pTooltip="Editar usuario" tooltipPosition="left"
-                            (onClick)="openEdit(user)">
-                        </p-button>
-                        <p-button icon="pi pi-shield" [rounded]="true" [text]="true" severity="info"
-                            pTooltip="Editar permisos" tooltipPosition="left"
-                            (onClick)="openPermissions(user)"
-                            [disabled]="!user.group_id">
-                        </p-button>
-                        <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
-                            pTooltip="Eliminar usuario" tooltipPosition="left"
-                            (onClick)="confirmDelete(user, $event)">
-                        </p-button>
+                        @if (permissions.hasPermission('user:edit')) {
+                            <p-button icon="pi pi-user-edit" [rounded]="true" [text]="true"
+                                pTooltip="Editar usuario" tooltipPosition="left"
+                                (onClick)="openEdit(user)">
+                            </p-button>
+                            <p-button icon="pi pi-shield" [rounded]="true" [text]="true" severity="info"
+                                pTooltip="Editar permisos" tooltipPosition="left"
+                                (onClick)="openPermissions(user)"
+                                [disabled]="!user.group_id">
+                            </p-button>
+                        }
+                        @if (permissions.hasPermission('user:delete')) {
+                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
+                                pTooltip="Eliminar usuario" tooltipPosition="left"
+                                (onClick)="confirmDelete(user, $event)">
+                            </p-button>
+                        }
                     </td>
                 </tr>
             </ng-template>

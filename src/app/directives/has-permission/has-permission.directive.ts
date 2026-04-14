@@ -58,7 +58,9 @@ export class HasPermissionDirective {
   @Input()
   set appHasPermission(permission: string) {
     this.requiredPermission = permission;
-    // No llamamos updateView aquí; el effect se encarga.
+    // Debemos llamar updateView porque en ng-template/p-table el Input puede llegar
+    // después de que el effect inicial se haya ejecutado.
+    this.updateView();
   }
 
   @Input()

@@ -1,6 +1,11 @@
 <p-toast></p-toast>
 
 <div class="auth-wrap">
+    <div style="text-align: center; margin-bottom: 1rem; cursor: pointer;" (click)="onLogoClick()"
+        title="Haz clic en el logo!">
+        <!-- Logo Image placeholder. You can replace src with your actual logo -->
+
+    </div>
     <p-card header="Login">
         <form [formGroup]="form" (ngSubmit)="submit()" class="form">
             <div class="field">

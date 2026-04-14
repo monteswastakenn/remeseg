@@ -27,9 +27,13 @@ export const routes: Routes = [
             { path: 'dashboard', component: Dashboard },
             { path: 'users', component: Users },
 
-            // Grupos: solo requieren autenticación (la directiva appHasPermission
-            // controla qué botones son visibles dentro del componente)
-            { path: 'groups', component: GroupsList },
+            // Grupos: requiere permiso general para ver grupos
+            { 
+                path: 'groups', 
+                component: GroupsList,
+                canActivate: [authGuard],
+                data: { permission: 'group:view' }
+            },
 
             // Kanban de un grupo: requiere permiso ticket:view
             {
@@ -39,10 +43,12 @@ export const routes: Routes = [
                 data: { permission: 'ticket:view' },
             },
 
-            // Administración de usuarios: accesible para gestión inicial
+            // Administración de usuarios: requiere permiso para ver la lista de usuarios
             {
                 path: 'admin-users',
                 component: AdminUsers,
+                canActivate: [authGuard],
+                data: { permission: 'user:view' }
             },
         ],
     },

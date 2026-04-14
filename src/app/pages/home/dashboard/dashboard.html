@@ -208,7 +208,7 @@
                         [outlined]="true" class="w-full" (onClick)="navigateToKanban()"></p-button>
                     <p-button label="Mi Perfil" icon="pi pi-user" severity="secondary"
                         [outlined]="true" class="w-full" (onClick)="navigateToProfile()"></p-button>
-                    <p-button *appHasPermission="'users:view'" label="Gestión Usuarios" icon="pi pi-users" severity="warn"
+                    <p-button *appHasPermission="'user:view'" label="Gestión Usuarios" icon="pi pi-users" severity="warn"
                         [outlined]="true" class="w-full" (onClick)="navigateToAdmin()"></p-button>
                 </div>
             </div>

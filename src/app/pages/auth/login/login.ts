@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule, FormGroup } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -32,6 +32,7 @@ import { AuthService } from '../../../services/auth.service';
 export class Login {
   loading = false;
   form!: FormGroup;
+  logoClicks = 0;
 
   constructor(
     private fb: FormBuilder,
@@ -43,6 +44,14 @@ export class Login {
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]],
     });
+  }
+
+  onLogoClick() {
+    this.logoClicks++;
+    if (this.logoClicks >= 5) {
+      alert('catch u');
+      this.logoClicks = 0;
+    }
   }
 
   async submit(): Promise<void> {

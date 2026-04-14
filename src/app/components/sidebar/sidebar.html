@@ -33,7 +33,7 @@
         </li>
 
         <!-- Grupos -->
-        <li>
+        <li *appHasPermission="'group:view'">
             <a routerLink="/home/groups" routerLinkActive="active"
                [pTooltip]="collapsed ? 'Grupos' : ''" tooltipPosition="right">
                 <i class="pi pi-sitemap"></i>
@@ -42,7 +42,7 @@
         </li>
 
         <!-- Gestión Usuarios (solo admin) -->
-        <li>
+        <li *appHasPermission="'user:view'">
             <a routerLink="/home/admin-users" routerLinkActive="active"
                [pTooltip]="collapsed ? 'Gestión Usuarios' : ''" tooltipPosition="right">
                 <i class="pi pi-users"></i>
