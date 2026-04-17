@@ -5,11 +5,15 @@ import rateLimit from '@fastify/rate-limit';
 import replyFrom from '@fastify/reply-from';
 import { createClient } from '@supabase/supabase-js';
 
-// ── Supabase client (solo para logs y métricas) ───────────────────────────────
-const supabaseUrl = process.env.SUPABASE_URL || 'https://dummy.supabase.co';
-const supabaseKey = process.env.SUPABASE_KEY || 'dummy_key';
+// ── Limpiar posibles comillas de las variables de entorno ──────────────
+const cleanUrl = (process.env.SUPABASE_URL || '').replace(/['"]+/g, '');
+const cleanKey = (process.env.SUPABASE_KEY || '').replace(/['"]+/g, '');
+const cleanFrontendVal = (process.env.FRONTEND_URL || '').replace(/['"]+/g, '');
 
-if (!process.env.SUPABASE_URL) {
+const supabaseUrl = cleanUrl || 'https://dummy.supabase.co';
+const supabaseKey = cleanKey || 'dummy_key';
+
+if (!cleanUrl) {
   console.warn("⚠️ ALERTA: SUPABASE_URL no está definida en las variables de entorno!");
 }
 
@@ -20,17 +24,14 @@ const app = Fastify({ logger: true });
 
 // ── CORS: permite peticiones desde Angular ────────────────────────────────────
 // FRONTEND_URL puede ser una URL única o una lista separada por comas
-const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',').map(u => u.trim())
+const allowedOrigins = cleanFrontendVal
+  ? cleanFrontendVal.split(',').map(u => u.trim())
   : [];
 
 await app.register(cors, {
   origin: (origin, cb) => {
-    // Sin FRONTEND_URL configurado → permitir todo (modo desarrollo)
     if (allowedOrigins.length === 0) return cb(null, true);
-    // Siempre permitir localhost en cualquier puerto
     if (!origin || /^https?:\/\/localhost/.test(origin)) return cb(null, true);
-    // Verificar contra la lista configurada
     if (allowedOrigins.includes(origin)) return cb(null, true);
     cb(new Error(`Origin no permitido: ${origin}`), false);
   },
@@ -52,7 +53,7 @@ await app.register(rateLimit, {
 
 // ── reply-from: reenvía peticiones a Supabase ─────────────────────────────────
 await app.register(replyFrom, {
-  base: process.env.SUPABASE_URL,
+  base: supabaseUrl,
 });
 
 // ── Helper: guardar log en audit_logs ────────────────────────────────────────
