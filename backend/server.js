@@ -136,14 +136,13 @@ app.all('/api/*', async (req, reply) => {
 });
 
 // ── Health check propio del gateway ──────────────────────────────────────────
-app.get('/health', async () => {
-  const { error } = await supabase.auth.getSession();
-  return {
-    status: error ? 'degraded' : 'ok',
+app.get('/health', async (_, reply) => {
+  return reply.code(200).send({
+    status: 'ok',
     timestamp: new Date().toISOString(),
-    supabase: error ? 'unreachable' : 'connected',
-  };
+  });
 });
+
 
 // ── Arrancar servidor ─────────────────────────────────────────────────────────
 try {
