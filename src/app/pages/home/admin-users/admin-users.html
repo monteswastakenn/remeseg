@@ -6,46 +6,41 @@
     <!-- ── Header ─────────────────────────────────────────────────────────────── -->
     <header class="page-header">
         <div>
-            <h2>Gestión de Usuarios</h2>
-            <p>Administra puestos, grupos y permisos de cada usuario del sistema.</p>
+            <h2>Directorio y Accesos</h2>
+            <p>Gestiona todos los usuarios de la plataforma y sus permisos otorgables.</p>
         </div>
         <div class="header-actions">
             <span class="p-input-icon-left search-wrap">
                 <i class="pi pi-search"></i>
-                <input pInputText
-                    [(ngModel)]="searchQuery"
-                    placeholder="Buscar por nombre, email, puesto o grupo..."
+                <input pInputText [(ngModel)]="searchQuery" placeholder="Buscar por nombre, email, grupo..."
                     class="search-input" />
             </span>
-            <p-button icon="pi pi-refresh" [text]="true" [rounded]="true"
-                pTooltip="Recargar" (onClick)="loadData()">
+            <p-button icon="pi pi-refresh" label="Actualizar" size="small" [outlined]="true"
+                (onClick)="loadData()">
             </p-button>
         </div>
     </header>
 
     <!-- ── Skeleton ───────────────────────────────────────────────────────────── -->
     @if (loading()) {
-        <div class="skeleton-list">
-            <p-skeleton height="52px" borderRadius="8px"></p-skeleton>
-            <p-skeleton height="52px" borderRadius="8px"></p-skeleton>
-            <p-skeleton height="52px" borderRadius="8px"></p-skeleton>
-            <p-skeleton height="52px" borderRadius="8px"></p-skeleton>
-        </div>
+    <div class="skeleton-list">
+        <p-skeleton height="52px" borderRadius="6px"></p-skeleton>
+        <p-skeleton height="52px" borderRadius="6px"></p-skeleton>
+        <p-skeleton height="52px" borderRadius="6px"></p-skeleton>
+    </div>
     } @else {
 
     <!-- ── Tabla de Usuarios ──────────────────────────────────────────────────── -->
     <div class="card-table">
-        <p-table [value]="filteredUsers()" [paginator]="true" [rows]="10"
-            responsiveLayout="scroll" [rowHover]="true" styleClass="p-datatable-sm">
+        <p-table [value]="filteredUsers()" [paginator]="true" [rows]="10" responsiveLayout="scroll" [rowHover]="true">
 
             <ng-template pTemplate="header">
                 <tr>
-                    <th pSortableColumn="full_name">Nombre <p-sortIcon field="full_name"></p-sortIcon></th>
-                    <th pSortableColumn="email">Email <p-sortIcon field="email"></p-sortIcon></th>
-                    <th pSortableColumn="puesto">Puesto <p-sortIcon field="puesto"></p-sortIcon></th>
-                    <th>Grupo</th>
-                    <th>Permisos</th>
-                    <th class="col-actions">Acciones</th>
+                    <th pSortableColumn="full_name">Nombre y Rol <p-sortIcon field="full_name"></p-sortIcon></th>
+                    <th pSortableColumn="email">Correo Institucional <p-sortIcon field="email"></p-sortIcon></th>
+                    <th>Grupo Asignado</th>
+                    <th>Accesos</th>
+                    <th class="col-actions">Opciones</th>
                 </tr>
             </ng-template>
 
@@ -57,7 +52,7 @@
                             <div class="user-avatar">{{ user.full_name.charAt(0).toUpperCase() }}</div>
                             <div>
                                 <div class="user-name">{{ user.full_name }}</div>
-                                <div class="user-email-small">{{ user.email }}</div>
+                                <div class="user-email-small">{{ user.puesto || 'Sin puesto definido' }}</div>
                             </div>
                         </div>
                     </td>
@@ -65,53 +60,40 @@
                     <!-- Email -->
                     <td><span class="email-cell">{{ user.email }}</span></td>
 
-                    <!-- Puesto -->
-                    <td>
-                        @if (user.puesto) {
-                            <span class="puesto-tag">{{ user.puesto }}</span>
-                        } @else {
-                            <span class="no-data">— Sin puesto —</span>
-                        }
-                    </td>
-
                     <!-- Grupo -->
                     <td>
                         @if (user.group_id) {
-                            <p-tag [value]="getGroupName(user.group_id)" severity="info" [rounded]="true"></p-tag>
+                            <p-tag [value]="getGroupName(user.group_id)" severity="secondary" [rounded]="true"></p-tag>
                         } @else {
-                            <span class="no-data">— Sin grupo —</span>
+                            <span class="no-data">Sin asignar</span>
                         }
                     </td>
 
                     <!-- Permisos -->
                     <td>
                         @if (user.group_id) {
-                            <p-button icon="pi pi-shield" label="Ver permisos" size="small"
-                                [text]="true" severity="info"
+                            <p-button icon="pi pi-shield" label="Revisar" size="small" [text]="true"
                                 (onClick)="openPermissions(user)"></p-button>
                         } @else {
-                            <span class="perm-none">Sin permisos</span>
+                            <span class="perm-none">Ninguno</span>
                         }
                     </td>
 
                     <!-- Acciones -->
                     <td class="col-actions">
                         @if (permissions.hasPermission('user:edit')) {
-                            <p-button icon="pi pi-user-edit" [rounded]="true" [text]="true"
-                                pTooltip="Editar usuario" tooltipPosition="left"
-                                (onClick)="openEdit(user)">
-                            </p-button>
-                            <p-button icon="pi pi-shield" [rounded]="true" [text]="true" severity="info"
-                                pTooltip="Editar permisos" tooltipPosition="left"
-                                (onClick)="openPermissions(user)"
-                                [disabled]="!user.group_id">
-                            </p-button>
+                        <p-button icon="pi pi-pencil" [text]="true" pTooltip="Editar"
+                            tooltipPosition="left" (onClick)="openEdit(user)">
+                        </p-button>
+                        <p-button icon="pi pi-shield" [text]="true"
+                            pTooltip="Permisos" tooltipPosition="left" (onClick)="openPermissions(user)"
+                            [disabled]="!user.group_id">
+                        </p-button>
                         }
                         @if (permissions.hasPermission('user:delete')) {
-                            <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger"
-                                pTooltip="Eliminar usuario" tooltipPosition="left"
-                                (onClick)="confirmDelete(user, $event)">
-                            </p-button>
+                        <p-button icon="pi pi-trash" [text]="true" severity="danger"
+                            pTooltip="Eliminar" tooltipPosition="left" (onClick)="confirmDelete(user, $event)">
+                        </p-button>
                         }
                     </td>
                 </tr>
@@ -119,7 +101,10 @@
 
             <ng-template pTemplate="emptymessage">
                 <tr>
-                    <td colspan="6" class="empty-row">No se encontraron usuarios.</td>
+                    <td colspan="5" class="empty-row">
+                        <i class="pi pi-users" style="font-size: 2rem; color: #cbd5e1;"></i>
+                        No se encontraron usuarios que coincidan con la búsqueda.
+                    </td>
                 </tr>
             </ng-template>
         </p-table>
@@ -131,10 +116,8 @@
 <!-- ════════════════════════════════════════════════════════════════════════════ -->
 <!-- Modal 1: Editar Información del Usuario                                    -->
 <!-- ════════════════════════════════════════════════════════════════════════════ -->
-<p-dialog [(visible)]="editDialogVisible" [modal]="true"
-    header="Editar Usuario"
-    [style]="{ width: '560px' }" [draggable]="false"
-    [contentStyle]="{ overflow: 'visible' }">
+<p-dialog [(visible)]="editDialogVisible" [modal]="true" header="Configuración de Cuenta" [style]="{ width: '560px' }"
+    [draggable]="false" [contentStyle]="{ overflow: 'visible' }" styleClass="enterprise-dialog">
 
     @if (editingUser) {
     <div class="edit-dialog-body">
@@ -148,127 +131,131 @@
             </div>
         </div>
 
-        <p-divider></p-divider>
-
         <!-- Info personal -->
-        <h4 class="section-title"><i class="pi pi-id-card"></i> Información Personal</h4>
-        <div class="form-grid">
-            <div class="field">
-                <label class="field-label">Nombre completo</label>
-                <input pInputText [(ngModel)]="form.full_name" class="w-full"
-                    placeholder="Nombre completo del usuario" />
-            </div>
-            <div class="field">
-                <label class="field-label">Puesto / Cargo</label>
-                <input pInputText [(ngModel)]="form.puesto" class="w-full"
-                    placeholder="Ej: Desarrollador Senior, QA Engineer..." />
+        <div class="panel-card">
+            <h4 class="section-title"><i class="pi pi-user"></i> Datos del perfil</h4>
+            <div class="form-grid">
+                <div class="field">
+                    <label class="field-label">Nombre completo</label>
+                    <input pInputText [(ngModel)]="form.full_name" class="w-full"
+                        placeholder="Ej: Juan Pérez" />
+                </div>
+                <div class="field">
+                    <label class="field-label">Cargo y especialidad</label>
+                    <input pInputText [(ngModel)]="form.puesto" class="w-full"
+                        placeholder="Ej: Abogado Corp." />
+                </div>
             </div>
         </div>
 
-        <p-divider></p-divider>
-
         <!-- Grupo -->
-        <h4 class="section-title"><i class="pi pi-sitemap"></i> Grupo Asignado</h4>
-        <div class="field">
-            <p-select
-                [options]="groupOptions()"
-                [(ngModel)]="form.group_id"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Selecciona un grupo"
-                styleClass="w-full"
-                appendTo="body">
-            </p-select>
-            <small class="field-hint">El grupo determina los permisos del usuario.</small>
+        <div class="panel-card">
+            <h4 class="section-title"><i class="pi pi-sitemap"></i> Grupo Departamental</h4>
+            <div class="field">
+                <p-select [options]="groupOptions()" [(ngModel)]="form.group_id" optionLabel="label" optionValue="value"
+                    placeholder="Elige un área" styleClass="w-full" appendTo="body">
+                </p-select>
+                <small class="field-hint">Definirá el conjunto de módulos accesibles para la persona.</small>
+            </div>
         </div>
     </div>
     }
 
     <ng-template pTemplate="footer">
-        <p-button label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary"
+        <p-button label="Cancelar" [text]="true" severity="secondary"
             (onClick)="editDialogVisible = false"></p-button>
-        <p-button label="Guardar cambios" icon="pi pi-check"
-            [loading]="saving()"
-            (onClick)="saveUser()"></p-button>
+        <p-button label="Guardar cambios" [loading]="saving()" (onClick)="saveUser()"></p-button>
     </ng-template>
 </p-dialog>
 
 <!-- ════════════════════════════════════════════════════════════════════════════ -->
 <!-- Modal 2: Editar Permisos del Grupo                                         -->
 <!-- ════════════════════════════════════════════════════════════════════════════ -->
-<p-dialog [(visible)]="permDialogVisible" [modal]="true"
-    [header]="'Permisos: ' + permDialogGroupName"
-    [style]="{ width: '620px' }" [draggable]="false">
+<p-dialog [(visible)]="permDialogVisible" [modal]="true" [header]="'Matriz de Permisos: ' + permDialogGroupName"
+    [style]="{ width: '700px' }" [draggable]="false" styleClass="enterprise-dialog">
 
     @if (permDialogUser) {
     <div class="perm-dialog-body">
         <div class="perm-dialog-info">
-            <i class="pi pi-info-circle"></i>
+            <i class="pi pi-info-circle" style="font-size: 1.25rem;"></i>
             <span>
-                Editando permisos del grupo <strong>{{ permDialogGroupName }}</strong>.
-                Los cambios afectan a <strong>todos los usuarios</strong> de este grupo.
+                Estás visualizando la configuración de <strong>{{ permDialogGroupName }}</strong>.
+                Cualquier cambio se aplicará a todos los integrantes actuales del grupo.
             </span>
         </div>
 
         @if (loadingPerms()) {
-            <p-skeleton height="40px" styleClass="mb-2"></p-skeleton>
-            <p-skeleton height="40px" styleClass="mb-2"></p-skeleton>
-            <p-skeleton height="40px"></p-skeleton>
+        <p-skeleton height="40px" styleClass="mb-2"></p-skeleton>
+        <p-skeleton height="40px" styleClass="mb-2"></p-skeleton>
+        <p-skeleton height="40px"></p-skeleton>
         } @else if (groupPerms().length === 0) {
-            <div class="perms-empty">
-                <i class="pi pi-exclamation-triangle"></i>
-                <span>Este grupo no tiene permisos configurados.</span>
-            </div>
+        <div class="perms-empty">
+            <i class="pi pi-lock" style="font-size: 2rem; opacity: 0.5;"></i>
+            <span>Este grupo no tiene ningún módulo registrado.</span>
+        </div>
         } @else {
-            <div class="perms-table-wrap">
-                <table class="perms-table">
-                    <thead>
-                        <tr>
-                            <th>Recurso</th>
-                            <th class="text-center">Ver</th>
-                            <th class="text-center">Crear</th>
-                            <th class="text-center">Editar</th>
-                            <th class="text-center">Eliminar</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (perm of groupPerms(); track perm.resource) {
-                        <tr>
-                            <td class="resource-label">
-                                <i class="pi pi-shield" style="margin-right: 0.5rem; opacity:0.5;"></i>
-                                {{ perm.label }}
-                            </td>
-                            <td class="text-center">
-                                <p-toggleSwitch [(ngModel)]="perm.can_view"
-                                    (onChange)="togglePerm(perm, 'can_view')">
-                                </p-toggleSwitch>
-                            </td>
-                            <td class="text-center">
-                                <p-toggleSwitch [(ngModel)]="perm.can_create"
-                                    (onChange)="togglePerm(perm, 'can_create')">
-                                </p-toggleSwitch>
-                            </td>
-                            <td class="text-center">
-                                <p-toggleSwitch [(ngModel)]="perm.can_edit"
-                                    (onChange)="togglePerm(perm, 'can_edit')">
-                                </p-toggleSwitch>
-                            </td>
-                            <td class="text-center">
-                                <p-toggleSwitch [(ngModel)]="perm.can_delete"
-                                    (onChange)="togglePerm(perm, 'can_delete')">
-                                </p-toggleSwitch>
-                            </td>
-                        </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+        <!-- Barra de acciones masivas -->
+        <div class="perms-bulk-actions">
+            <span class="bulk-label">Acciones masivas:</span>
+            <p-button
+                icon="pi pi-check-square"
+                label="Seleccionar todos"
+                size="small"
+                severity="success"
+                [outlined]="true"
+                (onClick)="selectAllPerms()"
+                [loading]="false">
+            </p-button>
+            <p-button
+                icon="pi pi-stop"
+                label="Quitar todos"
+                size="small"
+                severity="danger"
+                [outlined]="true"
+                (onClick)="clearAllPerms()"
+                [loading]="false">
+            </p-button>
+        </div>
+        <div class="perms-table-wrap">
+            <table class="perms-table">
+                <thead>
+                    <tr>
+                        <th>Módulo Entidad</th>
+                        <th class="text-center">Consultar</th>
+                        <th class="text-center">Crear</th>
+                        <th class="text-center">Editar</th>
+                        <th class="text-center">Eliminar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (perm of groupPerms(); track perm.resource) {
+                    <tr>
+                        <td class="resource-label">
+                            {{ perm.label }}
+                        </td>
+                        <td class="text-center">
+                            <p-checkbox [(ngModel)]="perm.can_view" [binary]="true" (onChange)="togglePerm(perm, 'can_view')"></p-checkbox>
+                        </td>
+                        <td class="text-center">
+                            <p-checkbox [(ngModel)]="perm.can_create" [binary]="true" (onChange)="togglePerm(perm, 'can_create')"></p-checkbox>
+                        </td>
+                        <td class="text-center">
+                            <p-checkbox [(ngModel)]="perm.can_edit" [binary]="true" (onChange)="togglePerm(perm, 'can_edit')"></p-checkbox>
+                        </td>
+                        <td class="text-center">
+                            <p-checkbox [(ngModel)]="perm.can_delete" [binary]="true" (onChange)="togglePerm(perm, 'can_delete')"></p-checkbox>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
         }
     </div>
     }
 
     <ng-template pTemplate="footer">
-        <p-button label="Cerrar" icon="pi pi-times" [text]="true" severity="secondary"
+        <p-button label="Cerrar y Aceptar" [text]="true"
             (onClick)="permDialogVisible = false"></p-button>
     </ng-template>
 </p-dialog>

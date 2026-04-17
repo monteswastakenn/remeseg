@@ -220,6 +220,65 @@ export class AdminUsers implements OnInit {
         }
     }
 
+    /** Activa TODOS los permisos de todos los módulos del grupo */
+    async selectAllPerms() {
+        const perms = this.groupPerms();
+        const fields: Array<keyof Pick<PermRow, 'can_view' | 'can_create' | 'can_edit' | 'can_delete'>> =
+            ['can_view', 'can_create', 'can_edit', 'can_delete'];
+
+        for (const perm of perms) {
+            if (!perm.id) continue;
+            const updates: Partial<PermRow> = {};
+            let needsUpdate = false;
+            for (const f of fields) {
+                if (!perm[f]) { updates[f] = true; needsUpdate = true; }
+            }
+            if (needsUpdate) {
+                const result = await this.auth.updatePermission(perm.id, updates as any);
+                if (result.statusCode === 200) {
+                    for (const f of fields) perm[f] = true;
+                }
+            }
+        }
+        // Forzar re-render del signal
+        this.groupPerms.set([...perms]);
+        this.msg.add({ severity: 'success', summary: 'Permisos activados', detail: 'Todos los permisos han sido habilitados.', life: 2500 });
+
+        const currentUser = this.auth.currentUser();
+        if (currentUser && currentUser.groupId === this.permDialogUser?.group_id) {
+            await this.auth.hydrateUser({ user: { id: currentUser.id, email: currentUser.email } } as any);
+        }
+    }
+
+    /** Desactiva TODOS los permisos de todos los módulos del grupo */
+    async clearAllPerms() {
+        const perms = this.groupPerms();
+        const fields: Array<keyof Pick<PermRow, 'can_view' | 'can_create' | 'can_edit' | 'can_delete'>> =
+            ['can_view', 'can_create', 'can_edit', 'can_delete'];
+
+        for (const perm of perms) {
+            if (!perm.id) continue;
+            const updates: Partial<PermRow> = {};
+            let needsUpdate = false;
+            for (const f of fields) {
+                if (perm[f]) { updates[f] = false; needsUpdate = true; }
+            }
+            if (needsUpdate) {
+                const result = await this.auth.updatePermission(perm.id, updates as any);
+                if (result.statusCode === 200) {
+                    for (const f of fields) perm[f] = false;
+                }
+            }
+        }
+        this.groupPerms.set([...perms]);
+        this.msg.add({ severity: 'warn', summary: 'Permisos removidos', detail: 'Todos los permisos han sido deshabilitados.', life: 2500 });
+
+        const currentUser = this.auth.currentUser();
+        if (currentUser && currentUser.groupId === this.permDialogUser?.group_id) {
+            await this.auth.hydrateUser({ user: { id: currentUser.id, email: currentUser.email } } as any);
+        }
+    }
+
     // ═══ Eliminar usuario ═══════════════════════════════════════════════════
 
     confirmDelete(user: DbUser, event: Event) {

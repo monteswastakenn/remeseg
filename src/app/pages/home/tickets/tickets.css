@@ -1,7 +1,21 @@
 /* --- RESET Y ESTRUCTURA PRINCIPAL --- */
-.page-container { max-width: 1400px; margin: 0 auto; }
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
-.header h2 { margin: 0; font-size: 1.8rem; color: var(--text-color); }
+.page-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header h2 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--text-color);
+}
 
 .header p-button {
     margin: 10px 0;

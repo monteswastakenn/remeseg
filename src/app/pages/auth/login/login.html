@@ -3,11 +3,28 @@
 <div class="auth-wrap">
     <div style="text-align: center; margin-bottom: 1rem; cursor: pointer;" (click)="onLogoClick()"
         title="Haz clic en el logo!">
-        <!-- Logo Image placeholder. You can replace src with your actual logo -->
-
     </div>
     <p-card header="Login">
         <form [formGroup]="form" (ngSubmit)="submit()" class="form">
+
+            <!-- ── Banner de bloqueo por rate limit ── -->
+            <div class="rate-limit-banner" *ngIf="isBlocked">
+                <div class="rate-limit-icon">🔒</div>
+                <div class="rate-limit-text">
+                    <strong>Cuenta bloqueada temporalmente</strong>
+                    <span>Demasiados intentos fallidos. Intenta de nuevo en:</span>
+                </div>
+                <div class="rate-limit-countdown">
+                    <span class="countdown-number">{{ countdown }}</span>
+                    <span class="countdown-label">seg</span>
+                </div>
+            </div>
+
+            <!-- ── Aviso de intentos restantes ── -->
+            <div class="attempts-warning" *ngIf="!isBlocked && attemptsLeft < 5 && attemptsLeft > 0">
+                <span>⚠️ Te quedan <strong>{{ attemptsLeft }}</strong> intento(s) antes de bloquearte.</span>
+            </div>
+
             <div class="field">
                 <label>Usuario / Email</label>
                 <input pInputText type="text" formControlName="email" placeholder="admin / user" />
@@ -28,7 +45,13 @@
                 </small>
             </div>
 
-            <button pButton type="submit" label="Ingresar" [loading]="loading" class="w-full"></button>
+            <button pButton type="submit"
+                [label]="isBlocked ? 'Bloqueado (' + countdown + 's)' : 'Ingresar'"
+                [loading]="loading"
+                [disabled]="isBlocked"
+                class="w-full"
+                [ngClass]="{'btn-blocked': isBlocked}">
+            </button>
 
             <div class="register-link">
                 <span>¿No tienes cuenta?</span>

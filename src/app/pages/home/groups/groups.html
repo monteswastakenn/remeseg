@@ -1,66 +1,76 @@
 <p-toast></p-toast>
 
-<div class="page-container">
-    <header class="header">
-        <div>
-            <h2>Groups</h2>
-            <p>Gestión de grupos.</p>
+<div class="elegant-module-layout">
+    <div class="glass-header">
+        <div class="header-content">
+            <div class="header-title">
+                <div class="header-icon"><i class="pi pi-users"></i></div>
+                <div>
+                    <h2>Grupos de Trabajo</h2>
+                    <p>Administra los grupos y su asignación de personal</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button *appHasPermission="'group:create'" pButton type="button" label="Nuevo Grupo" icon="pi pi-plus" (click)="openCreate()"></button>
+            </div>
         </div>
-    </header>
+    </div>
 
-    <!-- Skeleton mientras carga -->
     @if (loading()) {
-        <p-card class="card" header="Lista de grupos">
-            <p-skeleton height="2rem" styleClass="mb-2"></p-skeleton>
-            <p-skeleton height="2rem" styleClass="mb-2"></p-skeleton>
-            <p-skeleton height="2rem"></p-skeleton>
-        </p-card>
+        <div class="loading-grid" style="margin-top: 1rem;">
+            <p-skeleton height="400px"></p-skeleton>
+        </div>
     } @else {
-        <p-card class="card" header="Lista de grupos">
-            <div class="toolbar">
-                <span class="p-input-icon-left">
+        <div class="glass-card main-table-card">
+            <div class="toolbar glass-toolbar">
+                <span class="p-input-icon-left search-wrapper">
                     <i class="pi pi-search"></i>
-                    <input pInputText [(ngModel)]="q" placeholder="Buscar grupo..." />
+                    <input pInputText [(ngModel)]="q" placeholder="Buscar grupo..." class="glass-input" />
                 </span>
-
-                <button *appHasPermission="'group:create'" pButton type="button" label="Nuevo grupo"
-                    icon="pi pi-plus" (click)="openCreate()"></button>
             </div>
 
             <p-table [value]="filtered()" [paginator]="true" [rows]="7" [rowsPerPageOptions]="[7,10,20]"
-                [tableStyle]="{ 'min-width': '100%' }" styleClass="p-datatable-sm">
+                [tableStyle]="{ 'min-width': '100%' }" styleClass="p-datatable-sm minimalist-table" responsiveLayout="scroll">
 
                 <ng-template pTemplate="header">
                     <tr>
-                        <th>Nombre</th>
+                        <th pSortableColumn="name">Grupo <p-sortIcon field="name"></p-sortIcon></th>
                         <th>Descripción</th>
-                        <th>Integrantes</th>
-                        <th>Tickets</th>
-                        <th style="width: 200px;">Acciones</th>
+                        <th>Métricas</th>
+                        <th style="width: 140px; text-align: center;">Acciones</th>
                     </tr>
                 </ng-template>
 
                 <ng-template pTemplate="body" let-row>
                     <tr>
                         <td class="gname" style="cursor: pointer;" (click)="viewTickets(row)">
-                            <span class="badge"><i class="pi pi-sitemap"></i></span>
+                            <div class="group-badge">
+                                <span>{{ (row.name || 'G').slice(0,2).toUpperCase() }}</span>
+                            </div>
                             <div class="gmeta">
-                                <span class="title" style="color: var(--primary-color);">{{ row.name }}</span>
+                                <span class="title">{{ row.name }}</span>
                             </div>
                         </td>
 
-                        <td>{{ row.description }}</td>
-                        <td>{{ row.memberCount }}</td>
-                        <td>{{ row.ticketCount }}</td>
+                        <td>
+                            <div class="desc-text">{{ row.description || 'Sin descripción' }}</div>
+                        </td>
+
+                        <td>
+                            <div class="metrics-badges">
+                                <span class="metric-badge m-users" title="Integrantes"><i class="pi pi-user"></i> {{ row.memberCount }}</span>
+                                <span class="metric-badge m-tickets" title="Tickets"><i class="pi pi-ticket"></i> {{ row.ticketCount }}</span>
+                            </div>
+                        </td>
 
                         <td>
                             <div class="actions">
-                                <button pButton type="button" icon="pi pi-ticket" severity="info" rounded
-                                    title="Ver tickets" (click)="viewTickets(row)"></button>
-                                <button *appHasPermission="'group:edit'" pButton type="button"
-                                    icon="pi pi-pencil" severity="secondary" rounded (click)="openEdit(row)"></button>
-                                <button *appHasPermission="'group:delete'" pButton type="button"
-                                    icon="pi pi-trash" severity="danger" rounded (click)="remove(row)"></button>
+                                <button pButton type="button" icon="pi pi-window-maximize" class="p-button-text p-button-info" 
+                                    pTooltip="Ver detalle" tooltipPosition="top" (click)="viewTickets(row)"></button>
+                                <button *appHasPermission="'group:edit'" pButton type="button" icon="pi pi-pencil" 
+                                    class="p-button-text p-button-secondary" pTooltip="Editar" tooltipPosition="top" (click)="openEdit(row)"></button>
+                                <button *appHasPermission="'group:delete'" pButton type="button" icon="pi pi-trash" 
+                                    class="p-button-text p-button-danger" pTooltip="Eliminar" tooltipPosition="top" (click)="remove(row)"></button>
                             </div>
                         </td>
                     </tr>
@@ -68,31 +78,34 @@
 
                 <ng-template pTemplate="emptymessage">
                     <tr>
-                        <td colspan="5" class="text-center p-4">No se encontraron grupos.</td>
+                        <td colspan="4" class="text-center p-5 empty-state">
+                            <i class="pi pi-users empty-icon"></i>
+                            <p>No se encontraron grupos en la base de datos.</p>
+                        </td>
                     </tr>
                 </ng-template>
             </p-table>
-        </p-card>
+        </div>
     }
 </div>
 
 <p-dialog [(visible)]="dialogOpen" [modal]="true" [draggable]="false" [resizable]="false"
-    [style]="{ width: '520px', maxWidth: '92vw' }" [header]="isEdit ? 'Editar grupo' : 'Nuevo grupo'">
+    [style]="{ width: '520px', maxWidth: '92vw' }" [header]="isEdit ? 'Editar grupo' : 'Nuevo grupo'" styleClass="glass-dialog">
 
-    <div class="dlgGrid">
+    <div class="dlgGrid" style="margin-top: 1rem;">
         <div class="field full">
-            <label>Nombre</label>
-            <input pInputText [(ngModel)]="draft.name" placeholder="Nombre del grupo" />
+            <label>Nombre del Grupo</label>
+            <input pInputText [(ngModel)]="draft.name" placeholder="Ej: Recursos Humanos" class="w-full glass-input" />
         </div>
 
         <div class="field full">
             <label>Descripción</label>
-            <textarea pTextarea [(ngModel)]="draft.description" rows="3" placeholder="Descripción del grupo"></textarea>
+            <textarea pTextarea [(ngModel)]="draft.description" rows="3" placeholder="Descripción de las funciones del grupo..." class="w-full glass-input"></textarea>
         </div>
     </div>
 
-    <div class="dlgActions">
-        <button pButton type="button" label="Cancelar" severity="secondary" (click)="dialogOpen=false"></button>
+    <ng-template pTemplate="footer">
+        <button pButton type="button" label="Cancelar" icon="pi pi-times" [text]="true" severity="secondary" (click)="dialogOpen=false"></button>
         <button pButton type="button" label="Guardar" icon="pi pi-check" (click)="save()"></button>
-    </div>
+    </ng-template>
 </p-dialog>

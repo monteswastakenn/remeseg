@@ -105,7 +105,7 @@ export class Dashboard implements OnInit {
         this.ticketsPendiente(), this.ticketsEnProgreso(),
         this.ticketsRevision(), this.ticketsHecho(), this.ticketsBloqueado(),
       ],
-      backgroundColor: ['#64748b', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f43f5e'],
+      backgroundColor: ['#f59e0b', '#0ea5e9', '#8b5cf6', '#10b981', '#f43f5e'],
       borderWidth: 0,
       hoverOffset: 8,
     }]
@@ -115,7 +115,7 @@ export class Dashboard implements OnInit {
     labels: ['Completado', 'Restante'],
     datasets: [{
       data: [this.ticketsHecho(), this.totalTickets() - this.ticketsHecho()],
-      backgroundColor: ['#14b8a6', '#e2e8f0'],
+      backgroundColor: ['#2563eb', '#e2e8f0'],
       borderWidth: 0,
     }]
   }));
@@ -211,10 +211,10 @@ export class Dashboard implements OnInit {
       .slice(0, 5)
       .map(t => {
         const stateColor: Record<string, string> = {
-          'Pendiente': '#64748b',
+          'Pendiente': '#f59e0b',
           'En progreso': '#0ea5e9',
           'Revisión': '#8b5cf6',
-          'Hecho': '#14b8a6',
+          'Hecho': '#10b981',
           'Bloqueado': '#f43f5e',
         };
         return {

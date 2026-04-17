@@ -41,3 +41,15 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Backend — secretos y dependencias
+backend/.env
+backend/node_modules/
+backend/package-lock.json
+
+# Logs de build
+*.log
+build_err.txt
+build_error.txt
+build_output.txt
+raw_error.txt

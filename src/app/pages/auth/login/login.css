@@ -171,3 +171,98 @@
     text-transform: uppercase;
     letter-spacing: 2px;
 }
+
+/* ═══ RATE LIMIT BANNER ═══ */
+.rate-limit-banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    border: 1.5px solid #fca5a5;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    animation: shake 0.4s ease, fadeIn 0.3s ease;
+}
+
+.rate-limit-icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+
+.rate-limit-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    flex: 1;
+}
+
+.rate-limit-text strong {
+    color: #b91c1c;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.rate-limit-text span {
+    color: #dc2626;
+    font-size: 0.78rem;
+}
+
+.rate-limit-countdown {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #dc2626;
+    border-radius: 8px;
+    padding: 0.4rem 0.75rem;
+    flex-shrink: 0;
+}
+
+.countdown-number {
+    color: #ffffff;
+    font-size: 1.4rem;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    min-width: 2ch;
+    text-align: center;
+}
+
+.countdown-label {
+    color: #fecaca;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Aviso de intentos restantes */
+.attempts-warning {
+    background: linear-gradient(135deg, #fffbeb, #fef3c7);
+    border: 1.5px solid #fcd34d;
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.82rem;
+    color: #92400e;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Botón bloqueado */
+:host ::ng-deep .btn-blocked.p-button {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    cursor: not-allowed !important;
+    opacity: 0.85;
+}
+
+/* Animaciones */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%       { transform: translateX(-6px); }
+    40%       { transform: translateX(6px); }
+    60%       { transform: translateX(-4px); }
+    80%       { transform: translateX(4px); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

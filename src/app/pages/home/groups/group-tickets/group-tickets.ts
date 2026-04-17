@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, OnInit, signal, computed, LOCALE_ID } from '@angular/core';
+import { CommonModule, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { DragDropModule } from 'primeng/dragdrop';
@@ -29,7 +29,7 @@ interface GroupItem { id: string; nombre: string; }
   selector: 'app-group-tickets',
   standalone: true,
   imports: [
-    CommonModule, FormsModule, RouterModule, DragDropModule,
+    CommonModule, FormsModule, RouterModule, DragDropModule, DatePipe,
     SelectModule, ButtonModule, CardModule, TagModule, AvatarModule,
     DialogModule, InputTextModule, TextareaModule, TableModule,
     SelectButtonModule, ToastModule, SkeletonModule, HasPermissionDirective,
@@ -39,11 +39,11 @@ interface GroupItem { id: string; nombre: string; }
   styleUrls: ['./group-tickets.css'],
 })
 export class GroupTickets implements OnInit {
-  private auth       = inject(AuthService);
-  private permSvc    = inject(PermissionService);
-  private ticketSvc  = inject(TicketService);
-  private route      = inject(ActivatedRoute);
-  private router     = inject(Router);
+  private auth = inject(AuthService);
+  private permSvc = inject(PermissionService);
+  private ticketSvc = inject(TicketService);
+  private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private msgService = inject(MessageService);
 
   currentUser = this.auth.currentUser;
@@ -58,11 +58,11 @@ export class GroupTickets implements OnInit {
   allTickets = signal<TicketItem[]>([]);
 
   // ── Columnas Kanban derivadas ────────────────────────────────────────────────
-  pendiente  = signal<TicketItem[]>([]);
+  pendiente = signal<TicketItem[]>([]);
   enProgreso = signal<TicketItem[]>([]);
-  revision   = signal<TicketItem[]>([]);
-  hecho      = signal<TicketItem[]>([]);
-  bloqueado  = signal<TicketItem[]>([]);
+  revision = signal<TicketItem[]>([]);
+  hecho = signal<TicketItem[]>([]);
+  bloqueado = signal<TicketItem[]>([]);
 
   // ── Miembros del grupo (para dropdown "Asignado a") ─────────────────────
   groupMembers = signal<DbUser[]>([]);
@@ -76,28 +76,29 @@ export class GroupTickets implements OnInit {
 
   get totalTickets(): number {
     return this.pendiente().length + this.enProgreso().length +
-           this.revision().length + this.hecho().length + this.bloqueado().length;
+      this.revision().length + this.hecho().length + this.bloqueado().length;
   }
 
   get filteredGroupTickets(): TicketItem[] {
     let list = [...this.allTickets()];
     const userId = this.currentUser()?.id ?? '';
-    if (this.activeFilter === 'Mis tickets')  list = list.filter(t => t.assignee === userId);
-    if (this.activeFilter === 'Sin asignar')  list = list.filter(t => !t.assignee);
+    if (this.activeFilter === 'Mis tickets') list = list.filter(t => t.assignee === userId);
+    if (this.activeFilter === 'Sin asignar') list = list.filter(t => !t.assignee);
     if (this.activeFilter === 'Prioridad Alta') list = list.filter(t => t.priority === 'Urgente' || t.priority === 'Alta');
     return list;
   }
 
-  stateOptions    = ['Pendiente','En progreso','Revisión','Hecho','Bloqueado'].map(v => ({ label: v, value: v }));
-  priorityOptions = ['Urgente','Alta','Media Alta','Media','Media Baja','Baja','Muy Baja'].map(v => ({ label: v, value: v }));
+  stateOptions = ['Pendiente', 'En progreso', 'Revisión', 'Hecho', 'Bloqueado'].map(v => ({ label: v, value: v }));
+  priorityOptions = ['Urgente', 'Alta', 'Media Alta', 'Media', 'Media Baja', 'Baja', 'Muy Baja'].map(v => ({ label: v, value: v }));
   viewModeOptions = [
     { label: 'Tablero', value: 'kanban', icon: 'pi pi-objects-column' },
-    { label: 'Lista',   value: 'list',   icon: 'pi pi-list' }
+    { label: 'Lista', value: 'list', icon: 'pi pi-list' }
   ];
   viewMode: 'kanban' | 'list' = 'kanban';
 
   createDialogVisible = false;
   newTicket: Partial<TicketItem> = {};
+  creating = signal(false); // Guard anti-doble-clic
 
   editDialogVisible = false;
   selectedTicket: TicketItem | null = null;
@@ -162,8 +163,8 @@ export class GroupTickets implements OnInit {
 
   private applyFilter(tickets: TicketItem[]): TicketItem[] {
     const userId = this.currentUser()?.id ?? '';
-    if (this.activeFilter === 'Mis tickets')    return tickets.filter(t => t.assignee === userId);
-    if (this.activeFilter === 'Sin asignar')    return tickets.filter(t => !t.assignee);
+    if (this.activeFilter === 'Mis tickets') return tickets.filter(t => t.assignee === userId);
+    if (this.activeFilter === 'Sin asignar') return tickets.filter(t => !t.assignee);
     if (this.activeFilter === 'Prioridad Alta') return tickets.filter(t => t.priority === 'Urgente' || t.priority === 'Alta');
     return tickets;
   }
@@ -187,7 +188,7 @@ export class GroupTickets implements OnInit {
   async drop(newState: TicketState) {
     if (!this.draggedTicket) return;
     const ticket = this.draggedTicket;
-    
+
     if (ticket.state === newState) {
       this.draggedTicket = null;
       return;
@@ -211,10 +212,12 @@ export class GroupTickets implements OnInit {
       this.msgService.add({ severity: 'error', summary: 'Movimiento bloqueado', detail, life: 4000 });
     } else {
       this.distributeTickets(this.allTickets()); // Redistribuir visualmente
-      this.msgService.add({ severity: 'success', summary: 'Estado actualizado',
-        detail: `"${ticket.title}" → ${newState}`, life: 2500 });
+      this.msgService.add({
+        severity: 'success', summary: 'Estado actualizado',
+        detail: `"${ticket.title}" → ${newState}`, life: 2500
+      });
     }
-    
+
     this.draggedTicket = null;
   }
 
@@ -231,10 +234,10 @@ export class GroupTickets implements OnInit {
     if (!this.selectedTicket) return;
 
     const changes: Partial<TicketItem> = {};
-    if (this.editingTicket.title       !== this.selectedTicket.title)       changes.title       = this.editingTicket.title;
+    if (this.editingTicket.title !== this.selectedTicket.title) changes.title = this.editingTicket.title;
     if (this.editingTicket.description !== this.selectedTicket.description) changes.description = this.editingTicket.description;
-    if (this.editingTicket.state       !== this.selectedTicket.state)       changes.state       = this.editingTicket.state;
-    if (this.editingTicket.priority    !== this.selectedTicket.priority)    changes.priority    = this.editingTicket.priority;
+    if (this.editingTicket.state !== this.selectedTicket.state) changes.state = this.editingTicket.state;
+    if (this.editingTicket.priority !== this.selectedTicket.priority) changes.priority = this.editingTicket.priority;
 
     if (Object.keys(changes).length > 0) {
       const result = await this.ticketSvc.updateTicket(this.selectedTicket.id, changes);
@@ -281,19 +284,29 @@ export class GroupTickets implements OnInit {
   }
 
   async confirmCreateTicket() {
-    if (!this.newTicket.title || !this.selectedGroup()) return;
+    // Guard: evita duplicados por doble clic
+    if (this.creating()) return;
+    if (!this.newTicket.title?.trim() || !this.selectedGroup()) return;
+
+    this.creating.set(true);
     this.newTicket.groupId = this.selectedGroup()!.id;
 
-    const result = await this.ticketSvc.createTicket(this.newTicket);
-    if (result.statusCode === 201 && result.data) {
-      this.allTickets.update(list => [result.data!, ...list]);
-      this.distributeTickets(this.allTickets());
-      this.createDialogVisible = false;
-      this.msgService.add({ severity: 'success', summary: 'Ticket creado',
-        detail: `"${result.data.title}"`, life: 2500 });
-      this.openTicket(result.data);
-    } else {
-      this.msgService.add({ severity: 'error', summary: 'Error al crear', detail: 'Verifica los datos.', life: 3000 });
+    try {
+      const result = await this.ticketSvc.createTicket(this.newTicket);
+      if (result.statusCode === 201 && result.data) {
+        this.allTickets.update(list => [result.data!, ...list]);
+        this.distributeTickets(this.allTickets());
+        this.createDialogVisible = false;
+        this.msgService.add({
+          severity: 'success', summary: 'Ticket creado',
+          detail: `"${result.data.title}"`, life: 2500
+        });
+        this.openTicket(result.data);
+      } else {
+        this.msgService.add({ severity: 'error', summary: 'Error al crear', detail: 'Verifica los datos.', life: 3000 });
+      }
+    } finally {
+      this.creating.set(false);
     }
   }
 
@@ -306,11 +319,11 @@ export class GroupTickets implements OnInit {
   // ── Helpers permisos ─────────────────────────────────────────────────────────
   hasPermission(perm: string): boolean { return this.permSvc.hasPermission(perm); }
 
-  get canEditFull(): boolean        { return this.hasPermission('ticket:edit'); }
-  get canEditStatusOnly(): boolean  { return this.hasPermission('ticket:edit_state') || this.hasPermission('ticket:change_status'); }
-  get canDeleteTicket(): boolean    { return this.hasPermission('ticket:delete'); }
-  get canCreateTicket(): boolean    { return this.hasPermission('ticket:add') || this.hasPermission('ticket:create'); }
-  get canAssignTicket(): boolean    { return this.hasPermission('ticket:assign'); }
+  get canEditFull(): boolean { return this.hasPermission('ticket:edit'); }
+  get canEditStatusOnly(): boolean { return this.hasPermission('ticket:edit_state') || this.hasPermission('ticket:change_status'); }
+  get canDeleteTicket(): boolean { return this.hasPermission('ticket:delete'); }
+  get canCreateTicket(): boolean { return this.hasPermission('ticket:add') || this.hasPermission('ticket:create'); }
+  get canAssignTicket(): boolean { return this.hasPermission('ticket:assign'); }
 
   // ── Helpers UI ───────────────────────────────────────────────────────────────
   getPrioritySeverity(priority: string): 'success' | 'secondary' | 'info' | 'warn' | 'danger' | 'contrast' | undefined {

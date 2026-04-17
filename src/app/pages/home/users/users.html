@@ -19,109 +19,90 @@
     </ng-template>
 </p-dialog>
 
-<div class="page-container">
-
+<div class="elegant-profile-layout">
     @if (loading()) {
-        <div class="profile-hero">
-            <p-skeleton shape="circle" size="5rem"></p-skeleton>
-            <div style="flex:1">
-                <p-skeleton height="2rem" width="60%" styleClass="mb-2"></p-skeleton>
-                <p-skeleton height="1rem" width="40%"></p-skeleton>
-            </div>
+        <div class="loading-grid">
+            <p-skeleton height="300px"></p-skeleton>
+            <p-skeleton height="300px"></p-skeleton>
         </div>
     } @else if (currentUser(); as user) {
-
-        <!-- HERO: PERFIL -->
-        <div class="profile-hero">
-            <div class="hero-left">
-                <p-avatar [label]="(user.username || 'U').slice(0,1).toUpperCase()" shape="circle" size="xlarge">
-                </p-avatar>
+        
+        <!-- SIDEBAR INFO -->
+        <aside class="profile-sidebar">
+            <div class="glass-card user-identity">
+                <div class="avatar-wrapper">
+                    <p-avatar [label]="(user.username || 'U').slice(0,1).toUpperCase()" shape="circle" size="xlarge"></p-avatar>
+                </div>
+                <h2>{{ user.fullName }}</h2>
+                <span class="user-role">{{ user.puesto || 'Sin asignar' }}</span>
+                <span class="user-email"><i class="pi pi-envelope"></i> {{ user.email }}</span>
+                
+                <p-button *appHasPermission="'user:edit'" icon="pi pi-user-edit"
+                    label="Actualizar Perfil" styleClass="w-full mt-3" severity="primary" (onClick)="openEdit()"></p-button>
             </div>
 
-            <div class="hero-center">
-                <div class="hero-name-row">
-                    <h1>{{ user.fullName }}</h1>
+            <div class="glass-card user-details">
+                <h3><i class="pi pi-info-circle"></i> Información de Cuenta</h3>
+                <div class="detail-row">
+                    <span class="lbl">Usuario</span>
+                    <span class="val">{{ user.username }}</span>
                 </div>
-                <p class="hero-subtitle">{{ user.email }}</p>
-                @if (user.puesto) {
-                    <p class="hero-subtitle" style="opacity:0.7">{{ user.puesto }}</p>
-                }
-                <div class="hero-actions">
-                    <p-button *appHasPermission="'user:edit'" icon="pi pi-pencil"
-                        label="Editar" size="small" [outlined]="true" (onClick)="openEdit()"></p-button>
+                <div class="detail-row">
+                    <span class="lbl">Grupo de Trabajo</span>
+                    <span class="val">{{ user.groupId || 'Sin grupo' }}</span>
                 </div>
             </div>
-        </div>
+        </aside>
 
-        <!-- INFO CARDS -->
-        <div class="info-strip">
-            <div class="info-item">
-                <i class="pi pi-user"></i>
-                <div>
-                    <span class="info-label">Usuario</span>
-                    <span class="info-value">{{ user.username }}</span>
-                </div>
-            </div>
-            <div class="info-item">
-                <i class="pi pi-envelope"></i>
-                <div>
-                    <span class="info-label">Email</span>
-                    <span class="info-value">{{ user.email }}</span>
-                </div>
-            </div>
-            <div class="info-item">
-                <i class="pi pi-briefcase"></i>
-                <div>
-                    <span class="info-label">Puesto</span>
-                    <span class="info-value">{{ user.puesto || 'Sin asignar' }}</span>
-                </div>
-            </div>
-            <div class="info-item">
-                <i class="pi pi-id-card"></i>
-                <div>
-                    <span class="info-label">Grupo</span>
-                    <span class="info-value">{{ user.groupId || 'Sin grupo' }}</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- STATS + PERMISOS -->
-        <div class="content-columns">
-            <!-- Stats de tickets -->
+        <!-- MAIN CONTENT -->
+        <main class="profile-content">
+            
             @if (totalTickets > 0) {
-                <div class="col-stats">
-                    <h3 class="section-title"><i class="pi pi-chart-bar"></i> Resumen de Tickets</h3>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-number">{{ totalTickets }}</div>
-                            <div class="stat-label">Total</div>
-                        </div>
-                        <div class="stat-card stat-pending">
-                            <div class="stat-number">{{ pendingTickets }}</div>
-                            <div class="stat-label">Pendientes</div>
-                        </div>
-                        <div class="stat-card stat-progress">
-                            <div class="stat-number">{{ progressTickets }}</div>
-                            <div class="stat-label">En progreso</div>
-                        </div>
-                        <div class="stat-card stat-done">
-                            <div class="stat-number">{{ doneTickets }}</div>
-                            <div class="stat-label">Hechos</div>
-                        </div>
-                        <div class="stat-card stat-blocked">
-                            <div class="stat-number">{{ blockedTickets }}</div>
-                            <div class="stat-label">Bloqueados</div>
-                        </div>
+            <!-- Métrica Bento -->
+            <section class="bento-stats">
+                <div class="bento-card bento-total">
+                    <div class="bento-icon"><i class="pi pi-ticket"></i></div>
+                    <div class="bento-info">
+                        <span class="b-val">{{ totalTickets }}</span>
+                        <span class="b-lbl">Tickets Totales</span>
                     </div>
                 </div>
+                <div class="bento-card bento-pending">
+                    <div class="bento-icon"><i class="pi pi-clock"></i></div>
+                    <div class="bento-info">
+                        <span class="b-val">{{ pendingTickets }}</span>
+                        <span class="b-lbl">Pendientes</span>
+                    </div>
+                </div>
+                <div class="bento-card bento-progress">
+                    <div class="bento-icon"><i class="pi pi-spin pi-spinner"></i></div>
+                    <div class="bento-info">
+                        <span class="b-val">{{ progressTickets }}</span>
+                        <span class="b-lbl">En progreso</span>
+                    </div>
+                </div>
+                <div class="bento-card bento-done">
+                    <div class="bento-icon"><i class="pi pi-check-circle"></i></div>
+                    <div class="bento-info">
+                        <span class="b-val">{{ doneTickets }}</span>
+                        <span class="b-lbl">Hechos</span>
+                    </div>
+                </div>
+                <div class="bento-card bento-blocked">
+                    <div class="bento-icon"><i class="pi pi-ban"></i></div>
+                    <div class="bento-info">
+                        <span class="b-val">{{ blockedTickets }}</span>
+                        <span class="b-lbl">Bloqueados</span>
+                    </div>
+                </div>
+            </section>
             }
 
-            <!-- Permisos -->
-            <div class="col-perms">
-                <h3 class="section-title"><i class="pi pi-lock"></i> Permisos / Accesos</h3>
-                <div class="perms-card">
-                    <p-table [value]="permissions" [tableStyle]="{ 'min-width': '100%' }"
-                        styleClass="p-datatable-sm" [scrollable]="true" scrollHeight="320px">
+            <div class="bottom-grid">
+                <!-- Data Tables -->
+                <div class="glass-card widget-permissions">
+                    <h3><i class="pi pi-shield"></i> Accesos y Permisos</h3>
+                    <p-table [value]="permissions" styleClass="p-datatable-sm minimalist-table" [scrollable]="true" scrollHeight="300px">
                         <ng-template pTemplate="header">
                             <tr>
                                 <th>Módulo</th>
@@ -132,29 +113,22 @@
                         <ng-template pTemplate="body" let-row>
                             <tr>
                                 <td>{{ row.module || 'General' }}</td>
-                                <td><b>{{ row.name }}</b></td>
+                                <td><span class="perm-name">{{ row.name }}</span></td>
                                 <td>
                                     <p-tag [value]="row.status" [severity]="statusSeverity(row.status)"></p-tag>
                                 </td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
-                            <tr>
-                                <td colspan="3" class="text-center p-4">Sin permisos asignados.</td>
-                            </tr>
+                            <tr><td colspan="3" class="text-center p-4 text-color-secondary">Sin permisos asignados.</td></tr>
                         </ng-template>
                     </p-table>
                 </div>
-            </div>
-        </div>
 
-        <!-- TICKETS ASIGNADOS -->
-        @if (assignedTickets().length > 0) {
-            <div class="full-section">
-                <h3 class="section-title"><i class="pi pi-ticket"></i> Mis Tickets Asignados</h3>
-                <div class="table-card">
-                    <p-table [value]="assignedTickets()" [rows]="5" [paginator]="true" styleClass="p-datatable-sm"
-                        responsiveLayout="scroll" [rowHover]="true" dataKey="id">
+                @if (assignedTickets().length > 0) {
+                <div class="glass-card widget-tickets">
+                    <h3><i class="pi pi-list"></i> Tickets Actuales</h3>
+                    <p-table [value]="assignedTickets()" [rows]="5" [paginator]="true" styleClass="p-datatable-sm minimalist-table" responsiveLayout="scroll" [rowHover]="true" dataKey="id">
                         <ng-template pTemplate="header">
                             <tr>
                                 <th pSortableColumn="title">Título <p-sortIcon field="title"></p-sortIcon></th>
@@ -164,24 +138,19 @@
                         </ng-template>
                         <ng-template pTemplate="body" let-ticket>
                             <tr>
-                                <td><b>{{ ticket.title }}</b></td>
-                                <td>
-                                    <p-tag [value]="ticket.state" severity="info"></p-tag>
-                                </td>
-                                <td>
-                                    <p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag>
-                                </td>
+                                <td><span class="ticket-title-lbl">{{ ticket.title }}</span></td>
+                                <td><p-tag [value]="ticket.state" severity="info"></p-tag></td>
+                                <td><p-tag [value]="ticket.priority" [severity]="getPrioritySeverity(ticket.priority)"></p-tag></td>
                             </tr>
                         </ng-template>
                         <ng-template pTemplate="emptymessage">
-                            <tr>
-                                <td colspan="3" class="text-center p-4 text-color-secondary">No tienes tickets asignados.</td>
-                            </tr>
+                            <tr><td colspan="3" class="text-center p-4">No tienes tickets asignados.</td></tr>
                         </ng-template>
                     </p-table>
                 </div>
+                }
             </div>
-        }
 
+        </main>
     }
 </div>

@@ -1,5 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from './supabase.service';
+import { RateLimiterService, RATE_LIMITS } from './rate-limiter.service';
+import { environment } from '../../enviroments/enviroment';
 import type { ApiResponse } from '../models/api-response.model';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -67,8 +71,13 @@ export class AuthService {
     /** Usuario reactivo actual (null = no autenticado) */
     currentUser = signal<AppUser | null>(null);
 
-    private sb = inject(SupabaseService);
-    private supabase = this.sb.client;
+    private sb          = inject(SupabaseService);
+    private supabase    = this.sb.client;          // solo para Auth
+    private http        = inject(HttpClient);
+    private rateLimiter = inject(RateLimiterService);
+
+    /** Base URL del API Gateway (Railway) */
+    private gw = environment.apiGatewayUrl;
 
     constructor() {
         // Restaurar sesión al cargar la app
@@ -87,16 +96,21 @@ export class AuthService {
     }
 
     // ── Login con email + password ──────────────────────────────────────────────
+    // El login usa Supabase Auth SDK (necesario para JWT y refresh tokens)
     async login(email: string, password: string): Promise<ApiResponse<AppUser | null>> {
-        const { data, error } = await this.supabase.auth.signInWithPassword({
-            email,
-            password,
-        });
+        const limit = this.rateLimiter.attempt('login', RATE_LIMITS.LOGIN);
+        if (limit.isBlocked) {
+            console.warn(`[RateLimit] Login bloqueado. Reintenta en ${limit.retryAfterSeconds}s`);
+            return respond(429, 'users', null);
+        }
+
+        const { data, error } = await this.supabase.auth.signInWithPassword({ email, password });
 
         if (error || !data.session) {
             return respond(401, 'users', null);
         }
 
+        this.rateLimiter.reset('login');
         await this.hydrateUser(data.session);
         return respond(200, 'users', this.currentUser());
     }
@@ -108,27 +122,32 @@ export class AuthService {
         fullName: string,
         username: string
     ): Promise<ApiResponse<{ userId: string } | null>> {
+        const limit = this.rateLimiter.attempt('register', RATE_LIMITS.REGISTER);
+        if (limit.isBlocked) {
+            console.warn(`[RateLimit] Registro bloqueado. Reintenta en ${limit.retryAfterSeconds}s`);
+            return respond(429, 'users', null);
+        }
+
         const { data, error } = await this.supabase.auth.signUp({
             email,
             password,
-            options: {
-                data: { full_name: fullName, username },
-            },
+            options: { data: { full_name: fullName, username } },
         });
 
         if (error) return respond(400, 'users', null);
 
-        // Insertar fila en la tabla `users` (esquema real: id, email, full_name, password_hash)
+        // Insertar perfil en la tabla `users` via gateway
         if (data.user) {
-            const { error: insertError } = await this.supabase.from('users').insert({
-                id: data.user.id,
-                email,
-                full_name: fullName,
-                password_hash: password // Pasamos el password para cumplir con tu tabla
-            });
-
-            if (insertError) {
-                console.warn('Error insertando perfil en users:', insertError.message);
+            try {
+                await firstValueFrom(
+                    this.http.post(
+                        `${this.gw}/api/rest/v1/users`,
+                        { id: data.user.id, email, full_name: fullName, password_hash: password },
+                        { headers: { 'Prefer': 'return=minimal' } }
+                    )
+                );
+            } catch (e) {
+                console.warn('Error insertando perfil en users (gateway):', e);
             }
         }
 
@@ -138,6 +157,7 @@ export class AuthService {
     // ── Logout ──────────────────────────────────────────────────────────────────
     async logout(): Promise<void> {
         await this.supabase.auth.signOut();
+        this.rateLimiter.resetAll();
         this.currentUser.set(null);
     }
 
@@ -146,36 +166,43 @@ export class AuthService {
     }
 
     // ── Obtener todos los usuarios ──────────────────────────────────────────────
+    // Petición via API Gateway → Railway → Supabase
     async getUsers(): Promise<ApiResponse<DbUser[] | null>> {
-        const { data, error } = await this.supabase
-            .from('users')
-            .select('id, full_name, email, group_id, puesto')
-            .order('full_name');
-
-        if (error) return respond(500, 'users', null);
-        return respond(200, 'users', data ?? []);
+        try {
+            const params = new HttpParams().set('select', 'id,full_name,email,group_id,puesto').set('order', 'full_name');
+            const data = await firstValueFrom(
+                this.http.get<DbUser[]>(`${this.gw}/api/rest/v1/users`, { params })
+            );
+            return respond(200, 'users', data ?? []);
+        } catch {
+            return respond(500, 'users', null);
+        }
     }
 
     // ── Obtener todos los grupos ────────────────────────────────────────────────
     async getGroups(): Promise<ApiResponse<DbGroup[] | null>> {
-        const { data, error } = await this.supabase
-            .from('groups')
-            .select('id, name, description')
-            .order('name');
-
-        if (error) return respond(500, 'groups', null);
-        return respond(200, 'groups', data ?? []);
+        try {
+            const params = new HttpParams().set('select', 'id,name,description').set('order', 'name');
+            const data = await firstValueFrom(
+                this.http.get<DbGroup[]>(`${this.gw}/api/rest/v1/groups`, { params })
+            );
+            return respond(200, 'groups', data ?? []);
+        } catch {
+            return respond(500, 'groups', null);
+        }
     }
 
     // ── Actualizar group_id de un usuario ──────────────────────────────────────
     async updateUserGroup(userId: string, groupId: string | null): Promise<ApiResponse<null>> {
-        const { error } = await this.supabase
-            .from('users')
-            .update({ group_id: groupId })
-            .eq('id', userId);
-
-        if (error) return respond(500, 'users', null);
-        return respond(200, 'users', null);
+        try {
+            const params = new HttpParams().set('id', `eq.${userId}`);
+            await firstValueFrom(
+                this.http.patch(`${this.gw}/api/rest/v1/users`, { group_id: groupId }, { params })
+            );
+            return respond(200, 'users', null);
+        } catch {
+            return respond(500, 'users', null);
+        }
     }
 
     // ── Actualizar datos completos de un usuario ────────────────────────────────
@@ -183,26 +210,34 @@ export class AuthService {
         userId: string,
         payload: Partial<Pick<DbUser, 'full_name' | 'group_id' | 'puesto'>>
     ): Promise<ApiResponse<DbUser | null>> {
-        const { data, error } = await this.supabase
-            .from('users')
-            .update(payload)
-            .eq('id', userId)
-            .select()
-            .single();
-
-        if (error) return respond(500, 'users', null);
-        return respond(200, 'users', data as DbUser);
+        try {
+            const params = new HttpParams().set('id', `eq.${userId}`);
+            const rows = await firstValueFrom(
+                this.http.patch<DbUser[]>(`${this.gw}/api/rest/v1/users`, payload, {
+                    params,
+                    headers: { 'Prefer': 'return=representation' },
+                })
+            );
+            const data = Array.isArray(rows) ? rows[0] : rows;
+            return respond(200, 'users', data as DbUser);
+        } catch {
+            return respond(500, 'users', null);
+        }
     }
 
     // ── Obtener permisos de un grupo ─────────────────────────────────────────────
     async getGroupPermissions(groupId: string): Promise<ApiResponse<DbPermission[] | null>> {
-        const { data, error } = await this.supabase
-            .from('permissions')
-            .select('id, group_id, resource, can_view, can_create, can_edit, can_delete')
-            .eq('group_id', groupId);
-
-        if (error) return respond(500, 'permissions', null);
-        return respond(200, 'permissions', data ?? []);
+        try {
+            const params = new HttpParams()
+                .set('select', 'id,group_id,resource,can_view,can_create,can_edit,can_delete')
+                .set('group_id', `eq.${groupId}`);
+            const data = await firstValueFrom(
+                this.http.get<DbPermission[]>(`${this.gw}/api/rest/v1/permissions`, { params })
+            );
+            return respond(200, 'permissions', data ?? []);
+        } catch {
+            return respond(500, 'permissions', null);
+        }
     }
 
     // ── Actualizar una fila de permiso (toggle individual) ───────────────────
@@ -210,13 +245,15 @@ export class AuthService {
         permissionId: string,
         changes: Partial<Pick<DbPermission, 'can_view' | 'can_create' | 'can_edit' | 'can_delete'>>
     ): Promise<ApiResponse<null>> {
-        const { error } = await this.supabase
-            .from('permissions')
-            .update(changes)
-            .eq('id', permissionId);
-
-        if (error) return respond(500, 'permissions', null);
-        return respond(200, 'permissions', null);
+        try {
+            const params = new HttpParams().set('id', `eq.${permissionId}`);
+            await firstValueFrom(
+                this.http.patch(`${this.gw}/api/rest/v1/permissions`, changes, { params })
+            );
+            return respond(200, 'permissions', null);
+        } catch {
+            return respond(500, 'permissions', null);
+        }
     }
 
     // ── Crear o actualizar fila de permiso para un grupo + recurso ───────────
@@ -225,65 +262,84 @@ export class AuthService {
         resource: string,
         perms: { can_view: boolean; can_create: boolean; can_edit: boolean; can_delete: boolean }
     ): Promise<ApiResponse<DbPermission | null>> {
-        const { data, error } = await this.supabase
-            .from('permissions')
-            .upsert(
-                { group_id: groupId, resource, ...perms },
-                { onConflict: 'group_id,resource' }
-            )
-            .select()
-            .single();
-
-        if (error) return respond(500, 'permissions', null);
-        return respond(200, 'permissions', data as DbPermission);
+        try {
+            const url = `${this.gw}/api/rest/v1/permissions?on_conflict=group_id,resource`;
+            const rows = await firstValueFrom(
+                this.http.post<DbPermission[]>(
+                    url,
+                    { group_id: groupId, resource, ...perms },
+                    { headers: { 'Prefer': 'return=representation,resolution=merge-duplicates' } }
+                )
+            );
+            const data = Array.isArray(rows) ? rows[0] : rows;
+            return respond(200, 'permissions', data as DbPermission);
+        } catch {
+            return respond(500, 'permissions', null);
+        }
     }
 
     // ── Eliminar usuario de la tabla users ───────────────────────────────────
     async deleteUser(userId: string): Promise<ApiResponse<null>> {
-        const { error } = await this.supabase
-            .from('users')
-            .delete()
-            .eq('id', userId);
-
-        if (error) return respond(500, 'users', null);
-        return respond(200, 'users', null);
+        try {
+            const params = new HttpParams().set('id', `eq.${userId}`);
+            await firstValueFrom(
+                this.http.delete(`${this.gw}/api/rest/v1/users`, { params })
+            );
+            return respond(200, 'users', null);
+        } catch {
+            return respond(500, 'users', null);
+        }
     }
 
     // ── Carga el perfil completo desde la tabla `users` ─────────────────────────
+    // hydrateUser usa el gateway para obtener perfil y permisos
     async hydrateUser(session: Session | any): Promise<void> {
         const authUser: User = session.user;
 
-        // Leer el perfil desde la tabla pública `users`
-        const { data: profile } = await this.supabase
-            .from('users')
-            .select('id, full_name, email, group_id, puesto')
-            .eq('id', authUser.id)
-            .single();
+        try {
+            // Perfil del usuario via gateway
+            const profileParams = new HttpParams()
+                .set('select', 'id,full_name,email,group_id,puesto')
+                .set('id', `eq.${authUser.id}`);
+            const profiles = await firstValueFrom(
+                this.http.get<DbUser[]>(`${this.gw}/api/rest/v1/users`, { params: profileParams })
+            );
+            const profile = profiles?.[0] ?? null;
 
-        // Leer permisos desde la tabla `permissions` usando group_id
-        let permissions: Permission[] = [];
-        if (profile?.group_id) {
-            const { data: permRows } = await this.supabase
-                .from('permissions')
-                .select('resource, can_view, can_create, can_edit, can_delete')
-                .eq('group_id', profile.group_id);
-
-            if (permRows && permRows.length > 0) {
-                permissions = this.mapPermissions(permRows);
+            // Permisos del grupo via gateway
+            let permissions: Permission[] = [];
+            if (profile?.group_id) {
+                const permParams = new HttpParams()
+                    .set('select', 'resource,can_view,can_create,can_edit,can_delete')
+                    .set('group_id', `eq.${profile.group_id}`);
+                const permRows = await firstValueFrom(
+                    this.http.get<any[]>(`${this.gw}/api/rest/v1/permissions`, { params: permParams })
+                );
+                if (permRows && permRows.length > 0) {
+                    permissions = this.mapPermissions(permRows);
+                }
             }
+
+            this.currentUser.set({
+                id: authUser.id,
+                email: authUser.email ?? '',
+                username: authUser.user_metadata?.['username'] ?? authUser.email ?? '',
+                fullName: profile?.full_name ?? authUser.user_metadata?.['full_name'] ?? '',
+                puesto: profile?.puesto ?? undefined,
+                groupId: profile?.group_id ?? undefined,
+                permissions,
+            });
+        } catch (e) {
+            console.warn('[AuthService] Error en hydrateUser via gateway:', e);
+            // Fallback mínimo para no dejar current user en null
+            this.currentUser.set({
+                id: authUser.id,
+                email: authUser.email ?? '',
+                username: authUser.email ?? '',
+                fullName: authUser.user_metadata?.['full_name'] ?? '',
+                permissions: [],
+            });
         }
-
-        // ⛔ SIN FALLBACK — usuario sin grupo = sin permisos = array vacío
-
-        this.currentUser.set({
-            id: authUser.id,
-            email: authUser.email ?? '',
-            username: authUser.user_metadata?.['username'] ?? authUser.email ?? '',
-            fullName: profile?.full_name ?? authUser.user_metadata?.['full_name'] ?? '',
-            puesto: profile?.puesto ?? undefined,
-            groupId: profile?.group_id ?? undefined,
-            permissions,
-        });
     }
 
     // ── Convierte filas de `permissions` al tipo Permission[] ──────────────────

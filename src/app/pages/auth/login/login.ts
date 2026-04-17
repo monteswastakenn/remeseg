@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormBuilder, Validators, ReactiveFormsModule, FormGroup } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 
@@ -11,6 +11,7 @@ import { MessageService } from 'primeng/api';
 import { CommonModule } from '@angular/common';
 
 import { AuthService } from '../../../services/auth.service';
+import { RateLimiterService, RATE_LIMITS } from '../../../services/rate-limiter.service';
 
 @Component({
   selector: 'app-login',
@@ -29,21 +30,40 @@ import { AuthService } from '../../../services/auth.service';
   templateUrl: './login.html',
   styleUrls: ['./login.css'],
 })
-export class Login {
+export class Login implements OnInit, OnDestroy {
   loading = false;
   form!: FormGroup;
   logoClicks = 0;
+
+  // ── Rate Limit UI ───────────────────────────────────────────────
+  isBlocked = false;
+  countdown = 0;          // segundos restantes
+  attemptsLeft = RATE_LIMITS.LOGIN.maxAttempts; // intentos antes de bloqueo
+  private countdownInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor(
     private fb: FormBuilder,
     private auth: AuthService,
     private router: Router,
-    private msg: MessageService
+    private msg: MessageService,
+    private rateLimiter: RateLimiterService
   ) {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', [Validators.required]],
     });
+  }
+
+  ngOnInit(): void {
+    // Al cargar la página, revisar si ya estaba bloqueado
+    const status = this.rateLimiter.check('login', RATE_LIMITS.LOGIN);
+    if (status.isBlocked) {
+      this.startCountdown(status.retryAfterSeconds);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.clearCountdown();
   }
 
   onLogoClick() {
@@ -55,8 +75,9 @@ export class Login {
   }
 
   async submit(): Promise<void> {
-    this.form.markAllAsTouched();
+    if (this.isBlocked) return;
 
+    this.form.markAllAsTouched();
     if (this.form.invalid) {
       this.msg.add({
         severity: 'warn',
@@ -68,17 +89,32 @@ export class Login {
 
     const { email, password } = this.form.value;
     this.loading = true;
-
     const result = await this.auth.login(email, password);
-
     this.loading = false;
 
+    // 429 = bloqueado por rate limit
+    if (result.statusCode === 429) {
+      const status = this.rateLimiter.check('login', RATE_LIMITS.LOGIN);
+      this.startCountdown(status.retryAfterSeconds);
+      return;
+    }
+
     if (result.statusCode !== 200) {
-      this.msg.add({
-        severity: 'error',
-        summary: 'Acceso denegado',
-        detail: 'Credenciales incorrectas o cuenta no verificada.'
-      });
+      // Revisar cuántos intentos quedan
+      const status = this.rateLimiter.check('login', RATE_LIMITS.LOGIN);
+      this.attemptsLeft = status.attemptsRemaining;
+
+      if (status.isBlocked) {
+        this.startCountdown(status.retryAfterSeconds);
+      } else {
+        this.msg.add({
+          severity: 'error',
+          summary: 'Acceso denegado',
+          detail: status.attemptsRemaining > 0
+            ? `Credenciales incorrectas. Te quedan ${status.attemptsRemaining} intento(s).`
+            : 'Último intento. El siguiente bloqueo estará activo.'
+        });
+      }
       return;
     }
 
@@ -89,5 +125,30 @@ export class Login {
     });
 
     setTimeout(() => this.router.navigate(['/home']), 800);
+  }
+
+  // ── Inicia el contador regresivo visible ─────────────────────────
+  private startCountdown(seconds: number): void {
+    this.isBlocked = true;
+    this.countdown = seconds;
+    this.form.disable();
+    this.clearCountdown();
+
+    this.countdownInterval = setInterval(() => {
+      this.countdown--;
+      if (this.countdown <= 0) {
+        this.clearCountdown();
+        this.isBlocked = false;
+        this.attemptsLeft = RATE_LIMITS.LOGIN.maxAttempts;
+        this.form.enable();
+      }
+    }, 1000);
+  }
+
+  private clearCountdown(): void {
+    if (this.countdownInterval) {
+      clearInterval(this.countdownInterval);
+      this.countdownInterval = null;
+    }
   }
 }

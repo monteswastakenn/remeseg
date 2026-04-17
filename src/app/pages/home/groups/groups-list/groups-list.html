@@ -1,21 +1,23 @@
 <p-toast></p-toast>
 
-<div class="page-container">
+<div class="page-container enterprise-theme">
   <!-- Header -->
   <header class="page-header">
     <div>
-      <h2>Grupos</h2>
-      <p>Selecciona un grupo para ver y gestionar sus tickets en el tablero Kanban.</p>
+      <h2>Portafolio de Grupos</h2>
+      <p>Selecciona un grupo para operar sus incidencias en el tablero Kanban.</p>
     </div>
-    <p-button icon="pi pi-refresh" [text]="true" [rounded]="true"
-      pTooltip="Recargar" (onClick)="loadGroups()">
-    </p-button>
+    <div class="header-actions">
+        <p-button icon="pi pi-refresh" label="Actualizar" size="small" [outlined]="true"
+          (onClick)="loadGroups()">
+        </p-button>
+    </div>
   </header>
 
   <!-- Skeletons -->
   <div *ngIf="loading()" class="groups-grid">
     <div *ngFor="let s of skeletons" class="group-card-skeleton">
-      <p-skeleton height="180px" borderRadius="12px"></p-skeleton>
+      <p-skeleton height="200px" borderRadius="8px"></p-skeleton>
     </div>
   </div>
 
@@ -27,27 +29,25 @@
       <!-- Card Header -->
       <div class="card-top">
         <div class="group-icon">
-          <i class="pi pi-sitemap"></i>
+          <i class="pi pi-briefcase"></i>
         </div>
         <div class="group-meta">
           <h3>{{ group.name }}</h3>
-          <p>{{ group.description }}</p>
+          <p>{{ group.description || 'Sin descripción detallada' }}</p>
         </div>
-        <p-tag [value]="group.totalTickets + ' tickets'"
-          [severity]="group.totalTickets > 0 ? 'info' : 'secondary'"
-          [rounded]="true">
-        </p-tag>
+        <div class="ticket-badge" [class.active]="group.totalTickets > 0">
+            {{ group.totalTickets }}
+        </div>
       </div>
 
       <!-- Barra de progreso de completado -->
       <div class="progress-section">
         <div class="progress-label">
-          <span>Completado</span>
+          <span>Tasa de resolución</span>
           <strong>{{ completionRate(group) }}%</strong>
         </div>
         <div class="progress-bar-bg">
-          <div class="progress-bar-fill"
-            [style.width.%]="completionRate(group)">
+          <div class="progress-bar-fill" [style.width.%]="completionRate(group)">
           </div>
         </div>
       </div>
@@ -62,7 +62,7 @@
         <div class="status-pill prog">
           <span class="pill-dot"></span>
           <span>{{ group.enProgreso }}</span>
-          <span class="pill-label">En progreso</span>
+          <span class="pill-label">Proceso</span>
         </div>
         <div class="status-pill rev">
           <span class="pill-dot"></span>
@@ -77,26 +77,23 @@
         <div class="status-pill block">
           <span class="pill-dot"></span>
           <span>{{ group.bloqueado }}</span>
-          <span class="pill-label">Bloqueado</span>
+          <span class="pill-label">Bloqueo</span>
         </div>
       </div>
 
       <!-- Acción -->
       <div class="card-footer">
-        <p-button
-          label="Ver Kanban"
-          icon="pi pi-objects-column"
-          styleClass="w-full"
-          (onClick)="openKanban(group.id)">
+        <p-button label="Abrir Tablero" icon="pi pi-desktop" styleClass="w-full btn-kanban"
+            [outlined]="true" (onClick)="openKanban(group.id)">
         </p-button>
       </div>
     </div>
 
     <!-- Estado vacío -->
     <div *ngIf="groups().length === 0" class="empty-state">
-      <i class="pi pi-sitemap"></i>
-      <h3>No hay grupos</h3>
-      <p>Crea grupos desde la base de datos de Supabase para empezar.</p>
+      <i class="pi pi-folder-open"></i>
+      <h3>Directorio Vacío</h3>
+      <p>Aún no hay grupos creados o asignados a su perfil.</p>
     </div>
   </div>
 </div>

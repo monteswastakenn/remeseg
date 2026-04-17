@@ -1,64 +1,68 @@
-<aside class="sidebar-wrapper" [class.collapsed]="collapsed">
-    <div class="sidebar-header">
-        <div class="brand">
-            <div class="brand-icon">
-                <i class="pi pi-shield"></i>
-            </div>
-            <h3 *ngIf="!collapsed" class="brand-text">ERP Tickets</h3>
+<aside class="modern-sidebar" [class.is-collapsed]="collapsed">
+    <!-- Brand / Logo Area -->
+    <div class="sidebar-brand">
+        <div class="logo-box">
+            <i class="pi pi-shield"></i>
+        </div>
+        <div class="brand-name" *ngIf="!collapsed">
+            <h2>ERP System</h2>
+            <span>Enterprise Edition</span>
         </div>
     </div>
 
-    <ul class="sidebar-nav">
+    <!-- Navigation Area -->
+    <div class="sidebar-body">
+        <h4 class="menu-label" *ngIf="!collapsed">Principal</h4>
+        <ul class="nav-list">
+            <li>
+                <a routerLink="/home/dashboard" routerLinkActive="active"
+                   [pTooltip]="collapsed ? 'Dashboard' : ''" tooltipPosition="right">
+                    <i class="pi pi-chart-pie"></i>
+                    <span *ngIf="!collapsed">Dashboard</span>
+                </a>
+            </li>
+            <li>
+                <a routerLink="/home/users" routerLinkActive="active"
+                   [pTooltip]="collapsed ? 'Mi Perfil' : ''" tooltipPosition="right">
+                    <i class="pi pi-user-edit"></i>
+                    <span *ngIf="!collapsed">Mi Perfil</span>
+                </a>
+            </li>
+        </ul>
 
-        <!-- Dashboard -->
-        <li>
-            <a routerLink="/home/dashboard" routerLinkActive="active"
-               [pTooltip]="collapsed ? 'Dashboard' : ''" tooltipPosition="right">
-                <i class="pi pi-home"></i>
-                <span *ngIf="!collapsed">Dashboard</span>
-            </a>
-        </li>
+        <div class="divider" *ngIf="!collapsed"></div>
+        <h4 class="menu-label" *ngIf="!collapsed">Administración</h4>
+        <ul class="nav-list">
+            <li *appHasPermission="'group:view'">
+                <a routerLink="/home/groups" routerLinkActive="active"
+                   [pTooltip]="collapsed ? 'Grupos' : ''" tooltipPosition="right">
+                    <i class="pi pi-briefcase"></i>
+                    <span *ngIf="!collapsed">Grupos y Áreas</span>
+                </a>
+            </li>
+            <li *appHasPermission="'user:view'">
+                <a routerLink="/home/admin-users" routerLinkActive="active"
+                   [pTooltip]="collapsed ? 'Gestión Usuarios' : ''" tooltipPosition="right">
+                    <i class="pi pi-users"></i>
+                    <span *ngIf="!collapsed">Directorio Accesos</span>
+                </a>
+            </li>
+        </ul>
+    </div>
 
-        <!-- Mi Perfil -->
-        <li>
-            <a routerLink="/home/users" routerLinkActive="active"
-               [pTooltip]="collapsed ? 'Mi Perfil' : ''" tooltipPosition="right">
-                <i class="pi pi-user"></i>
-                <span *ngIf="!collapsed">Mi Perfil</span>
-            </a>
-        </li>
-
-        <li class="nav-divider" *ngIf="!collapsed">
-            <span class="nav-section">Gestión</span>
-        </li>
-
-        <!-- Grupos -->
-        <li *appHasPermission="'group:view'">
-            <a routerLink="/home/groups" routerLinkActive="active"
-               [pTooltip]="collapsed ? 'Grupos' : ''" tooltipPosition="right">
-                <i class="pi pi-sitemap"></i>
-                <span *ngIf="!collapsed">Grupos</span>
-            </a>
-        </li>
-
-        <!-- Gestión Usuarios (solo admin) -->
-        <li *appHasPermission="'user:view'">
-            <a routerLink="/home/admin-users" routerLinkActive="active"
-               [pTooltip]="collapsed ? 'Gestión Usuarios' : ''" tooltipPosition="right">
-                <i class="pi pi-users"></i>
-                <span *ngIf="!collapsed">Gestión Usuarios</span>
-            </a>
-        </li>
-
-    </ul>
-
+    <!-- Footer Area -->
     <div class="sidebar-footer">
-        <button *ngIf="!collapsed" pButton type="button" label="Cerrar sesión" icon="pi pi-sign-out"
-            severity="secondary" class="w-full" (click)="logout()"></button>
-
-        <button *ngIf="collapsed" pButton type="button" icon="pi pi-sign-out" severity="secondary" class="w-full"
+        <div class="footer-card" *ngIf="!collapsed">
+            <div class="status-indicator">
+                <span class="pulse-dot"></span>
+                <span class="status-text">Sistema En Línea</span>
+            </div>
+            <button pButton type="button" label="Cerrar sesión" icon="pi pi-power-off"
+                class="logout-btn w-full" (click)="logout()"></button>
+        </div>
+        
+        <button *ngIf="collapsed" pButton type="button" icon="pi pi-power-off" class="logout-btn-icon w-full"
             (click)="logout()" aria-label="Cerrar sesión" pTooltip="Cerrar sesión" tooltipPosition="right">
         </button>
-        <div *ngIf="!collapsed" class="version-tag">v1.0.0</div>
     </div>
 </aside>
