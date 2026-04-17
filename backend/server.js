@@ -6,10 +6,14 @@ import replyFrom from '@fastify/reply-from';
 import { createClient } from '@supabase/supabase-js';
 
 // ── Supabase client (solo para logs y métricas) ───────────────────────────────
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
+const supabaseUrl = process.env.SUPABASE_URL || 'https://dummy.supabase.co';
+const supabaseKey = process.env.SUPABASE_KEY || 'dummy_key';
+
+if (!process.env.SUPABASE_URL) {
+  console.warn("⚠️ ALERTA: SUPABASE_URL no está definida en las variables de entorno!");
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ── Instancia de Fastify ──────────────────────────────────────────────────────
 const app = Fastify({ logger: true });
