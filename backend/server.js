@@ -5,156 +5,82 @@ import rateLimit from '@fastify/rate-limit';
 import replyFrom from '@fastify/reply-from';
 import { createClient } from '@supabase/supabase-js';
 
-// ── Limpiar posibles comillas de las variables de entorno ──────────────
-const cleanUrl = (process.env.SUPABASE_URL || '').replace(/['"]+/g, '');
-const cleanKey = (process.env.SUPABASE_KEY || '').replace(/['"]+/g, '');
-const cleanFrontendVal = (process.env.FRONTEND_URL || '').replace(/['"]+/g, '');
+// ── LIMPIEZA DE VARIABLES ───────────────────────────────────────────────────
+const rawUrl = process.env.SUPABASE_URL || '';
+const rawKey = process.env.SUPABASE_KEY || '';
+const rawFront = process.env.FRONTEND_URL || '';
 
-const supabaseUrl = cleanUrl || 'https://dummy.supabase.co';
-const supabaseKey = cleanKey || 'dummy_key';
+const supabaseUrl = rawUrl.replace(/['"]+/g, '').trim();
+const supabaseKey = rawKey.replace(/['"]+/g, '').trim();
+const frontendUrl = rawFront.replace(/['"]+/g, '').trim();
 
-if (!cleanUrl) {
-  console.warn("⚠️ ALERTA: SUPABASE_URL no está definida en las variables de entorno!");
-}
+console.log('--- INICIO DE GATEWAY ---');
+console.log('URL de Supabase detectada:', supabaseUrl || 'FALTA');
+console.log('Key de Supabase detectada:', supabaseKey ? 'OK (Presente)' : 'FALTA');
+console.log('Puerto asignado:', process.env.PORT || '3000');
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(
+    supabaseUrl || 'https://dummy.supabase.co', 
+    supabaseKey || 'dummy'
+);
 
-// ── Instancia de Fastify ──────────────────────────────────────────────────────
-const app = Fastify({ logger: true });
-
-// ── CORS: permite peticiones desde Angular ────────────────────────────────────
-// FRONTEND_URL puede ser una URL única o una lista separada por comas
-const allowedOrigins = cleanFrontendVal
-  ? cleanFrontendVal.split(',').map(u => u.trim())
-  : [];
-
-await app.register(cors, {
-  origin: (origin, cb) => {
-    if (allowedOrigins.length === 0) return cb(null, true);
-    if (!origin || /^https?:\/\/localhost/.test(origin)) return cb(null, true);
-    if (allowedOrigins.includes(origin)) return cb(null, true);
-    cb(new Error(`Origin no permitido: ${origin}`), false);
-  },
-  methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'apikey', 'Prefer', 'Range'],
-  credentials: true,
+const app = Fastify({ 
+    logger: true,
+    disableRequestLogging: false 
 });
 
-// ── Rate Limiting global (máximo 100 req / minuto por IP) ─────────────────────
-await app.register(rateLimit, {
-  max: 100,
-  timeWindow: '1 minute',
-  errorResponseBuilder: (_req, context) => ({
-    statusCode: 429,
-    error: 'Too Many Requests',
-    message: `Demasiadas peticiones. Intenta de nuevo en ${context.after}.`,
-  }),
+// ── HEALTH CHECK (Inmediato) ────────────────────────────────────────────────
+app.get('/health', async (req, reply) => {
+    return { status: 'ok', timestamp: new Date().toISOString() };
 });
 
-// ── reply-from: reenvía peticiones a Supabase ─────────────────────────────────
-await app.register(replyFrom, {
-  base: supabaseUrl,
-});
+// ── CONFIGURACIÓN DE PLUGINS ───────────────────────────────────────────────
+const startServer = async () => {
+    try {
+        // Cors
+        const allowedOrigins = frontendUrl ? frontendUrl.split(',').map(u => u.trim()) : [];
+        await app.register(cors, {
+            origin: (origin, cb) => {
+                if (!origin || allowedOrigins.length === 0 || /^https?:\/\/localhost/.test(origin) || allowedOrigins.includes(origin)) {
+                    return cb(null, true);
+                }
+                cb(new Error("CORS Blocked"), false);
+            },
+            methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'apikey', 'Prefer', 'Range'],
+            credentials: true
+        });
 
-// ── Helper: guardar log en audit_logs ────────────────────────────────────────
-async function saveLog({ method, endpoint, statusCode, userId, ip }) {
-  try {
-    await supabase.from('audit_logs').insert({
-      user_id:    userId ?? null,
-      action:     method.toLowerCase(),   // get, post, patch, delete
-      resource:   endpoint,
-      ip_address: ip ?? null,
-    });
-  } catch (e) {
-    app.log.warn('Error guardando log: ' + e.message);
-  }
-}
+        // Proxy
+        if (supabaseUrl) {
+            await app.register(replyFrom, { base: supabaseUrl });
+        }
 
-// ── Helper: guardar métrica en api_metrics ────────────────────────────────────
-async function saveMetric({ endpoint, method, statusCode, responseMs, userId }) {
-  try {
-    await supabase.from('api_metrics').insert({
-      endpoint,
-      method:      method.toLowerCase(),
-      status_code: statusCode,
-      response_ms: responseMs,
-      user_id:     userId ?? null,
-    });
-  } catch (e) {
-    app.log.warn('Error guardando métrica: ' + e.message);
-  }
-}
+        // Rate Limit
+        await app.register(rateLimit, { max: 200, timeWindow: '1 minute' });
 
-// ── Helper: extraer user_id del token JWT de Supabase ────────────────────────
-function extractUserId(authHeader) {
-  try {
-    if (!authHeader?.startsWith('Bearer ')) return null;
-    const token = authHeader.replace('Bearer ', '');
-    const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
-    return payload.sub ?? null;
-  } catch {
-    return null;
-  }
-}
+        // Ruta Proxy
+        app.all('/api/*', async (req, reply) => {
+            const targetPath = req.url.replace(/^\/api/, '');
+            return reply.from(targetPath, {
+                rewriteRequestHeaders: (request, headers) => ({
+                    ...headers,
+                    apikey: supabaseKey,
+                })
+            });
+        });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PROXY ROUTE: reenvía todo /api/* → Supabase REST API
-// Ejemplo: GET /api/rest/v1/tickets → Supabase /rest/v1/tickets
-// ─────────────────────────────────────────────────────────────────────────────
-app.all('/api/*', async (req, reply) => {
-  const start = Date.now();
+        // ── ENCENDIDO ───────────────────────────────────────────────────────────
+        const port = process.env.PORT || 3000;
+        await app.listen({ port: Number(port), host: '0.0.0.0' });
+        
+        console.log(`🚀 GATEWAY ENCENDIDO EN PUERTO ${port}`);
+        console.log(`Ruta de salud disponible en: /health`);
 
-  // Extraer user_id del token
-  const userId = extractUserId(req.headers['authorization']);
+    } catch (err) {
+        console.error('❌ ERROR FATAL AL INICIAR:', err);
+        process.exit(1);
+    }
+};
 
-  // Construir la ruta destino en Supabase (quita el prefijo /api)
-  const targetPath = req.url.replace(/^\/api/, '');
-
-  // Reenviar con reply-from (mantiene headers, body, método, etc.)
-  await reply.from(targetPath, {
-    rewriteRequestHeaders: (_req, headers) => ({
-      ...headers,
-      // Inyectar la API key de Supabase (así Angular no necesita exponerla)
-      apikey: process.env.SUPABASE_KEY,
-    }),
-    onResponse: async (_req, _reply, res) => {
-      const responseMs = Date.now() - start;
-      const endpoint   = targetPath.split('?')[0]; // sin query params
-
-      // Guardar log y métrica en paralelo (sin bloquear la respuesta)
-      saveLog({
-        method:     req.method,
-        endpoint,
-        statusCode: res.statusCode,
-        userId,
-        ip:         req.ip,
-      });
-      saveMetric({
-        endpoint,
-        method:      req.method,
-        statusCode:  res.statusCode,
-        responseMs,
-        userId,
-      });
-    },
-  });
-});
-
-// ── Health check propio del gateway ──────────────────────────────────────────
-app.get('/health', async (_, reply) => {
-  return reply.code(200).send({
-    status: 'ok',
-    timestamp: new Date().toISOString(),
-  });
-});
-
-
-// ── Arrancar servidor ─────────────────────────────────────────────────────────
-try {
-  const port = parseInt(process.env.PORT ?? '3000');
-  await app.listen({ port, host: '0.0.0.0' });
-  console.log(`🚀 API Gateway corriendo en http://0.0.0.0:${port}`);
-} catch (err) {
-  app.log.error(err);
-  process.exit(1);
-}
+startServer();
