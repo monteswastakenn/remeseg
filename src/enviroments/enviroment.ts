@@ -9,7 +9,7 @@ export const environment = {
     // La apikey NUNCA llega a Supabase directamente desde el front en prod;
     // el gateway la inyecta. Aquí se mantiene solo para el SDK de Auth.
     supabase: {
-        url: 'https://disigmhgwkbmhmbeoseo.supabase.co',
-        key: 'sb_publishable_jIFPJ1CLPHNG5lljyDk_Sg_7A4XhTra'
+        url: 'https://wrqgdxtcqagaphiecruu.supabase.co',
+        key: 'sb_publishable_02Ehd-dzq-N1B8_AHKx18w_btwo_3Kg'
     }
 };
