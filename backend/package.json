@@ -18,5 +18,8 @@
     "@supabase/supabase-js": "^2.103.3",
     "dotenv": "^17.4.2",
     "fastify": "^5.8.5"
+  },
+  "engines": {
+    "node": "20.x"
   }
 }
