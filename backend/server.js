@@ -24,9 +24,68 @@ const supabase = createClient(
     supabaseKey || 'dummy'
 );
 
+// ── UTILIDADES DE LOGGING ──────────────────────────────────────────────────
+const extractUserId = (authHeader) => {
+    if (!authHeader) return null;
+    try {
+        const token = authHeader.replace('Bearer ', '');
+        const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64').toString());
+        return payload.sub; // ID de usuario de Supabase
+    } catch (e) {
+        return null;
+    }
+};
+
+const extractResource = (url) => {
+    const parts = url.split('?')[0].split('/');
+    // Buscamos el recurso después de /rest/v1/ o similar
+    const restIdx = parts.indexOf('v1');
+    return restIdx !== -1 && parts[restIdx + 1] ? parts[restIdx + 1] : 'unknown';
+};
+
 const app = Fastify({ 
     logger: true,
     disableRequestLogging: false 
+});
+
+// ── HOOKS DE LOGGING ────────────────────────────────────────────────────────
+// Capturar cuerpo de la petición para auditoría
+app.addHook('preHandler', async (req, reply) => {
+    req.startTime = Date.now();
+});
+
+// Registrar Métricas de API y Logs de Auditoría
+app.addHook('onResponse', async (request, reply) => {
+    const duration = Date.now() - (request.startTime || Date.now());
+    const userId = extractUserId(request.headers.authorization);
+    const endpoint = extractResource(request.url);
+    const method = request.method;
+
+    // 1. Guardar Métricas
+    const { error: metricError } = await supabase.from('api_metrics').insert({
+        endpoint,
+        method,
+        status_code: reply.statusCode,
+        response_ms: duration,
+        user_id: userId
+    });
+
+    if (metricError) console.error('Error guardando métricas:', metricError);
+
+    // 2. Guardar Auditoría (Solo mutaciones exitosas)
+    const mutations = ['POST', 'PUT', 'PATCH', 'DELETE'];
+    if (mutations.includes(method) && reply.statusCode < 400) {
+        const { error: auditError } = await supabase.from('audit_logs').insert({
+            user_id: userId,
+            action: method.toLowerCase() === 'post' ? 'insert' : (method.toLowerCase() === 'delete' ? 'delete' : 'update'),
+            resource: endpoint,
+            new_value: request.body || null,
+            ip_address: request.ip,
+            resource_id: request.query?.id ? request.query.id.replace('eq.', '') : null
+        });
+
+        if (auditError) console.error('Error guardando auditoría:', auditError);
+    }
 });
 
 // ── HEALTH CHECK (Inmediato) ────────────────────────────────────────────────

@@ -1,61 +1,34 @@
 <p-toast></p-toast>
+<div style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #f8fafc; padding: 1rem;">
+    <p-card header="Inicia Sesión" [style]="{ 'width': '100%', 'max-width': '400px' }">
+        <form [formGroup]="form" (ngSubmit)="submit()" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <p-message *ngIf="isBlocked" severity="error" styleClass="w-full">
+                <ng-template pTemplate="content">
+                    <span class="ml-2">Bloqueado: {{ countdown }}s restantes</span>
+                </ng-template>
+            </p-message>
 
-<div class="auth-wrap">
-    <div style="text-align: center; margin-bottom: 1rem; cursor: pointer;" (click)="onLogoClick()"
-        title="Haz clic en el logo!">
-    </div>
-    <p-card header="Login">
-        <form [formGroup]="form" (ngSubmit)="submit()" class="form">
-
-            <!-- ── Banner de bloqueo por rate limit ── -->
-            <div class="rate-limit-banner" *ngIf="isBlocked">
-                <div class="rate-limit-icon">🔒</div>
-                <div class="rate-limit-text">
-                    <strong>Cuenta bloqueada temporalmente</strong>
-                    <span>Demasiados intentos fallidos. Intenta de nuevo en:</span>
-                </div>
-                <div class="rate-limit-countdown">
-                    <span class="countdown-number">{{ countdown }}</span>
-                    <span class="countdown-label">seg</span>
-                </div>
-            </div>
-
-            <!-- ── Aviso de intentos restantes ── -->
-            <div class="attempts-warning" *ngIf="!isBlocked && attemptsLeft < 5 && attemptsLeft > 0">
-                <span>⚠️ Te quedan <strong>{{ attemptsLeft }}</strong> intento(s) antes de bloquearte.</span>
-            </div>
-
-            <div class="field">
-                <label>Usuario / Email</label>
-                <input pInputText type="text" formControlName="email" placeholder="admin / user" />
-
-                <small class="error" *ngIf="form.controls['email'].touched && form.controls['email'].invalid">
-                    Ingresa un usuario válido.
+            <div class="flex flex-column gap-2">
+                <label style="font-weight: 600;">Usuario / Email</label>
+                <input pInputText type="email" formControlName="email" placeholder="Ingresa tu correo" style="width: 100%;" />
+                <small *ngIf="form.controls['email'].touched && form.controls['email'].invalid" style="color: red;">
+                    Correo inválido
                 </small>
             </div>
 
-            <div class="field">
-                <label>Contraseña</label>
-                <p-password formControlName="password" [toggleMask]="true" [feedback]="false"
-                    placeholder="Ingresa tu contraseña!">
-                </p-password>
-
-                <small class="error" *ngIf="form.controls['password'].touched && form.controls['password'].invalid">
-                    La contraseña es obligatoria.
+            <div class="flex flex-column gap-2">
+                <label style="font-weight: 600;">Contraseña</label>
+                <p-password formControlName="password" [toggleMask]="true" [feedback]="false" styleClass="w-full" inputStyleClass="w-full" placeholder="••••••••"></p-password>
+                <small *ngIf="form.controls['password'].touched && form.controls['password'].invalid" style="color: red;">
+                    Contraseña obligatoria
                 </small>
             </div>
 
-            <button pButton type="submit"
-                [label]="isBlocked ? 'Bloqueado (' + countdown + 's)' : 'Ingresar'"
-                [loading]="loading"
-                [disabled]="isBlocked"
-                class="w-full"
-                [ngClass]="{'btn-blocked': isBlocked}">
-            </button>
+            <p-button type="submit" [label]="isBlocked ? 'Bloqueado (' + countdown + 's)' : 'Ingresar'" [loading]="loading" [disabled]="isBlocked" styleClass="w-full"></p-button>
 
-            <div class="register-link">
-                <span>¿No tienes cuenta?</span>
-                <a routerLink="/register">Crear cuenta</a>
+            <div style="text-align: center; margin-top: 1rem;">
+                <a routerLink="/register" style="color: #2563eb; text-decoration: none;">¿No tienes cuenta? Registrate</a>
             </div>
         </form>
     </p-card>

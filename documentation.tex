@@ -1,0 +1,207 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{fancyhdr}
+
+% Configuración de márgenes
+\geometry{top=3cm, bottom=3cm, left=2.5cm, right=2.5cm}
+
+% Configuración de código
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstset{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\onehalfspacing
+
+\begin{document}
+
+% --- PORTADA ---
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    \Huge
+    \textbf{Documentación Técnica del Proyecto: ERP Moderno con Arquitectura de API Gateway} \\
+    \vspace{1.5cm}
+    \Large
+    Implementación de Microservicios con Angular, Fastify y Supabase \\
+    \vspace{2cm}
+    
+    \textbf{Estudiante:} \\
+    [LUIS FELIPE MONTES VELAZQUEZ] \\
+    \vspace{1cm}
+    
+    \textbf{Docente:} \\
+    [EMMANUEL MARTINEZ HERNANDEZ] \\
+    \vspace{2cm}
+    
+    \vfill
+    \large
+    Fecha de entrega: \today \\
+   UNIVERSIDAD TECNOLÓGICA DE QUERÉTARO
+\end{titlepage}
+
+\newpage
+
+% --- ÍNDICE ---
+\tableofcontents
+\listoffigures
+\newpage
+
+% --- INTRODUCCIÓN ---
+\section{Introducción}
+La evolución tecnológica actual ha transformado la manera en que las organizaciones gestionan sus recursos vitales. Los sistemas de Planificación de Recursos Empresariales (ERP, por sus siglas en inglés) ya no son simples bases de datos centralizadas, sino ecosistemas dinámicos que demandan una alta disponibilidad, seguridad robusta y una experiencia de usuario fluida. En este contexto, el presente proyecto aborda la migración de un sistema tradicional hacia una arquitectura moderna orientada a servicios, utilizando herramientas de vanguardia que garantizan la escalabilidad del sistema a largo plazo.
+
+Uno de los desafíos más críticos en el desarrollo de aplicaciones web contemporáneas es la exposición de credenciales sensibles y la lógica de negocio en el lado del cliente. Tradicionalmente, las aplicaciones de una sola página (SPA) se comunicaban directamente con servicios de BaaS (Backend as a Service), lo que facilitaba el desarrollo rápido pero introducía vulnerabilidades. La implementación de un API Gateway surge como la solución técnica ideal para centralizar la comunicación, ocultar las llaves de acceso y aplicar políticas de seguridad transversales antes de que las peticiones alcancen la base de datos.
+
+El uso de Angular como framework de frontend permite una estructuración modular y eficiente de la interfaz de usuario. Al integrar bibliotecas de componentes premium como PrimeNG, el sistema no solo cumple con las funcionalidades requeridas, sino que ofrece una estética profesional que facilita la adopción por parte del usuario final. Esta capa visual actúa como el punto de entrada para los empleados de la organización, permitiendo una gestión intuitiva de tickets, usuarios y permisos de acceso según el rol desempeñado.
+
+En la capa del servidor, el microservicio desarrollado con Fastify funge como el cerebro del sistema. Al ser el framework más rápido para Node.js, Fastify minimiza la latencia en las peticiones y permite una gestión asíncrona de los datos sin comprometer el rendimiento. Este componente es esencial para la arquitectura de microservicios propuesta, ya que desacopla la lógica de autenticación de la lógica de manipulación de datos, permitiendo que cada parte del sistema evolucione de manera independiente y sea desplegada en la nube de forma transparente.
+
+Finalmente, la elección de Supabase como motor de PostgreSQL y sistema de autenticación cierra el círculo de esta arquitectura "full-stack". Al utilizar herramientas que ofrecen seguridad a nivel de filas (RLS) y autenticación mediante JWT, el proyecto asegura que la integridad de los datos empresariales esté protegida en todo momento. A lo largo de este documento, se detallará el proceso técnico, los diagramas de flujo y las decisiones de diseño que hicieron posible la culminación exitosa de este sistema ERP modernizado.
+
+\newpage
+
+% --- DESARROLLO ---
+\section{Desarrollo del Proyecto}
+
+\subsection{Proceso de Desarrollo del Frontend (Angular + PrimeNG)}
+El desarrollo de la interfaz de usuario se centró en la creación de una aplicación tipo SPA utilizando Angular en su versión más reciente, aprovechando la potencia de los \textit{Standalone Components} para reducir la complejidad técnica de los módulos tradicionales. El proceso comenzó con el diseño de una arquitectura limpia basada en servicios y componentes reactivos.
+
+\subsubsection{Migración a PrimeNG y Estética Premium}
+Para elevar el estándar visual del ERP, se implementó el ecosistema de PrimeNG. Esta decisión permitió utilizar componentes altamente optimizados como \texttt{p-table} para la visualización de datos, \texttt{p-card} para los contenedores y \texttt{p-toast} para la retroalimentación en tiempo real. La integración de estos componentes se realizó mediante un sistema de temas personalizados basado en archivos CSS modernos, evitando el uso de placeholders genéricos y asegurando una identidad visual premium.
+
+\subsubsection{Gestión de Vistas}
+Las vistas principales del sistema se dividieron en tres módulos lógicos:
+\begin{description}
+    \item[Autenticación:] Paneles de Login y Registro con validaciones dinámicas y manejo de estados de carga (\textit{loading states}).
+    \item[Dashboard:] Una vista central que presenta métricas clave y accesos directos a las funciones más utilizadas.
+    \item[Administración:] Grillas de datos avanzadas para la gestión de usuarios, donde se implementaron selectores de roles y edición en línea.
+\end{description}
+
+\subsection{Microservicio Backend: API Gateway con Fastify}
+El componente de backend fue diseñado para actuar como un intermediario seguro entre el frontend y Supabase. Este microservicio se desplegó en la plataforma Railway, garantizando que el servidor esté disponible de forma global sin necesidad de infraestructuras locales persistentes.
+
+\subsubsection{Configuración y Seguridad}
+El servidor Fastify implementa un sistema de "Proxy Inverso" utilizando la biblioteca \texttt{@fastify/reply-from}. Esta configuración permite que el frontend envíe peticiones al Gateway (ej: \texttt{/api/rest/v1/users}), y este las redirija a la URL real de Supabase inyectando automáticamente la \textit{Service Key} o la \textit{Anon Key} de forma segura. De esta manera, las llaves maestras de la base de datos nunca viajan por el internet abierto ni son visibles en el código del frontend.
+
+\subsubsection{Sanitización de Variables yLogs}
+Debido a que el despliegue se realizó en contenedores de Railway, se implementó una capa de sanitización de variables de entorno para prevenir errores comunes en la lectura de credenciales. Además, se configuró un sistema de \textit{logging} verboso que registra cada interacción, lo cual fue fundamental para diagnosticar el fallo del \textit{healthcheck} inicial y asegurar que el servicio sea saludable bajo estrés de carga.
+
+\subsection{Comunicación y Flujo de Datos}
+La comunicación entre los componentes se rige por un flujo jerárquico diseñado para la seguridad y la auditoría. 
+
+\subsubsection{Inyección de Tokens JWT}
+Cuando un usuario inicia sesión, el servicio de autenticación obtiene un token JWT directamente de Supabase Auth. Posteriormente, un interceptor de HTTP en Angular captura cada petición saliente dirigida al Gateway e inyecta el encabezado \texttt{Authorization: Bearer <token>}. Esto asegura que el Gateway pueda validar quién está realizando la petición antes de procesarla.
+
+\subsubsection{Operación de Solicitud y Respuesta (Request/Response)}
+El ciclo de vida de una solicitud de datos opera de la siguiente manera:
+\begin{enumerate}
+    \item \textbf{Origen:} El componente de Angular solicita datos a través de \texttt{ApiGatewayService}.
+    \item \textbf{Interceptor:} Se añade el JWT al header de la petición.
+    \item \textbf{Gateway:} Railway recibe la petición, valida el dominio de origen (CORS) y aplica límites de velocidad (\textit{Rate Limiting}).
+    \item \textbf{Proxy:} El Gateway retransmite la petición a Supabase, añadiendo la llave de autenticación interna necesaria.
+    \item \textbf{Base de Datos:} Supabase valida el RLS y devuelve el JSON correspondiente.
+    \item \textbf{Retorno:} El Gateway recibe la respuesta y la envía al frontend, donde el servicio de Angular la mapea a modelos reactivos.
+\end{enumerate}
+
+\begin{figure}[h]
+    \centering
+    \begin{figure}
+        \centering
+        \includegraphics[width=0.5\linewidth]{Untitled diagram-2026-04-17-212336.png}
+\begin{figure}
+            \centering
+            \includegraphics[width=0.5\linewidth]{}
+\begin{figure}
+                \centering
+                \includegraphics[width=0.5\linewidth]{Untitled diagram-2026-04-17-212336.png}
+
+                \label{fig:placeholder}
+            \end{figure}
+
+            \label{fig:placeholder}
+        \end{figure}
+
+    \end{figure}
+    \caption{Arquitectura del Sistema ERP con API Gateway}
+    \label{fig:arch}
+\end{figure}
+
+\newpage
+
+% --- CONCLUSIÓN ---
+\section{Conclusión}
+La implementación de este sistema ERP modernizado ha demostrado que el uso de una arquitectura desacoplada no solo mejora la seguridad, sino que facilita el mantenimiento y el despliegue continuo de aplicaciones empresariales. Al separar las responsabilidades a través de un API Gateway y microservicios especializados, hemos logrado ocultar la complejidad de la infraestructura al usuario final, entregando una experiencia de uso rápida y robusta que cumple con los estándares de la industria actual.
+
+La transición hacia componentes de UI profesionales mediante PrimeNG fue un factor determinante para el éxito del proyecto. Un sistema de gestión administrativa es tan eficiente como su capacidad para presentar información de manera clara, y Angular ha proporcionado la base necesaria para manejar estados complejos de forma reactiva. Esto asegura que el ERP pueda crecer orgánicamente, añadiendo nuevos módulos como inventarios o nóminas sin necesidad de reescribir la base del código.
+
+Desde una perspectiva de ciberseguridad, el API Gateway desplegado en Railway actúa como un perímetro de defensa infranqueable. Al no permitir la comunicación directa entre el navegador del usuario y la base de datos maestra, mitigamos riesgos de inyección y ataques de fuerza bruta que suelen afectar a los sistemas mal configurados. La centralización de logs y auditoría en el backend nos permite tener un control total sobre quién accede a qué recurso y en qué momento.
+
+Finalmente, este proyecto establece una base sólida para futuras expansiones hacia microservicios adicionales. La flexibilidad de Fastify y la potencia de Supabase permiten que el sistema sea escalable horizontalmente, preparándolo para soportar miles de usuarios concurrentes. La culminación de este desarrollo representa un avance significativo en la integración de tecnologías modernas para resolver problemas reales de gestión corporativa con un enfoque profesional y premium.
+
+\newpage
+
+% --- BIBLIOGRAFÍA ---
+\section{Bibliografía}
+\begin{enumerate}
+    \item \textbf{Angular Docs.} Documentation for the Angular Web Framework. Recuperado de: \url{https://angular.io/docs}
+    \item \textbf{Fastify Team (2024).} Fastify v5 Documentation: Fast and low overhead web framework, for Node.js. Recuperado de: \url{https://www.fastify.io/docs/latest/}
+    \item \textbf{Supabase (2024).} Documentation: The Open Source Firebase Alternative. Recuperado de: \url{https://supabase.com/docs}
+\end{enumerate}
+
+\newpage
+
+% --- APÉNDICE ---
+\section{Apendice / Anexos}
+\subsection{Configuración del Servidor (Server.js)}
+A continuación se presenta un fragmento de la lógica del Gateway encargado de la sanitización y el proxy de datos:
+
+\begin{lstlisting}[language=JavaScript, caption=Implementación de Proxy en Fastify]
+app.all('/api/*', async (req, reply) => {
+    const targetPath = req.url.replace(/^\/api/, '');
+    console.log(`�� API Gateway: query en ${targetPath}`);
+    return reply.from(targetPath, {
+        rewriteRequestHeaders: (request, headers) => ({
+            ...headers,
+            apikey: supabaseKey,
+        })
+    });
+});
+\end{lstlisting}
+
+\subsection{Diagrama de Flujo de Datos}
+El siguiente diagrama detalla la comunicación entre el Front y el Back:
+\begin{itemize}
+    \item \textbf{Request:} Angular Interceptor $\rightarrow$ JWT $\rightarrow$ Railway Gateway.
+    \item \textbf{Proxy:} Gateway $\rightarrow$ Service Key $\rightarrow$ Supabase API.
+    \item \textbf{Response:} Supabase $\rightarrow$ Secure JSON $\rightarrow$ Frontend Component.
+\end{itemize}
+
+\end{document}

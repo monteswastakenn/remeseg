@@ -128,26 +128,37 @@ export class AuthService {
             return respond(429, 'users', null);
         }
 
-        const { data, error } = await this.supabase.auth.signUp({
+        // 1. Crear usuario en Supabase Auth
+        const { data, error: sbError } = await this.supabase.auth.signUp({
             email,
             password,
             options: { data: { full_name: fullName, username } },
         });
 
-        if (error) return respond(400, 'users', null);
+        if (sbError) {
+            console.error('[Supabase Auth ERROR]:', sbError.message);
+            // Si el error es por email confirmation o ya existe, lo reportamos mejor
+            return respond(400, 'users', null);
+        }
 
-        // Insertar perfil en la tabla `users` via gateway
+        // 2. Insertar perfil en la tabla `users` via gateway
         if (data.user) {
             try {
                 await firstValueFrom(
                     this.http.post(
                         `${this.gw}/api/rest/v1/users`,
-                        { id: data.user.id, email, full_name: fullName, password_hash: password },
+                        { 
+                          id: data.user.id, 
+                          email, 
+                          full_name: fullName, 
+                          password_hash: password // Nota: esto se guarda en plano, el hash real lo tiene Supabase Auth
+                        },
                         { headers: { 'Prefer': 'return=minimal' } }
                     )
                 );
-            } catch (e) {
-                console.warn('Error insertando perfil en users (gateway):', e);
+            } catch (e: any) {
+                console.error('❌ Error insertando perfil en tabla public.users:', e.error?.message || e.message);
+                // Si falla aquí, es probable que sea por RLS o falta de políticas en Supabase
             }
         }
 

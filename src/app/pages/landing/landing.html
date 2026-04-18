@@ -1,11 +1,23 @@
-<div class="page">
-    <div class="card">
-        <h1 class="title">Bienvenido</h1>
-        <p class="subtitle">Selecciona una opción</p>
-
-        <div class="actions">
-            <a class="btn btn-primary" routerLink="/login">Login</a>
-            <a class="btn btn-secondary" routerLink="/register">Register</a>
+<div style="display: flex; align-items: center; justify-content: center; width: 100vw; height: 100vh; background-color: #f1f5f9; position: fixed; top: 0; left: 0; z-index: 10000; font-family: sans-serif;">
+    <p-card [style]="{ 'width': '420px', 'border-radius': '1rem', 'text-align': 'center' }" styleClass="shadow-2">
+        <ng-template pTemplate="header">
+            <div style="padding-top: 2rem;">
+                <i class="pi pi-building" style="font-size: 3rem; color: #2563eb;"></i>
+            </div>
+        </ng-template>
+        
+        <h1 style="font-size: 2.2rem; color: #1e293b; margin: 1rem 0 0.5rem; font-weight: 800;">BIENVENIDO</h1>
+        <p style="color: #64748b; font-size: 1.1rem; margin-bottom: 2.5rem;">Sistema de Gestión ERP</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+            <p-button label="Iniciar Sesión" icon="pi pi-sign-in" routerLink="/login" styleClass="w-full" [style]="{'padding': '1rem', 'font-weight': '600'}"></p-button>
+            <p-button label="Registrarse" icon="pi pi-user-plus" routerLink="/register" severity="secondary" styleClass="w-full" [style]="{'padding': '1rem', 'font-weight': '600'}"></p-button>
         </div>
-    </div>
+
+        <ng-template pTemplate="footer">
+            <div style="border-top: 1px solid #f1f5f9; padding-top: 1rem; margin-top: 1rem; font-size: 0.8rem; color: #94a3b8;">
+                Panel de Control &middot; 2026
+            </div>
+        </ng-template>
+    </p-card>
 </div>

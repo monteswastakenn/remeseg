@@ -7,7 +7,11 @@ import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { ButtonModule } from 'primeng/button';
 import { ToastModule } from 'primeng/toast';
-import { MessageService } from 'primeng/api';
+import { DividerModule } from 'primeng/divider';
+import { MessageModule } from 'primeng/message';
+import { InputGroupModule } from 'primeng/inputgroup';
+import { InputGroupAddonModule } from 'primeng/inputgroupaddon';
+import { MessageService, SharedModule } from 'primeng/api';
 import { CommonModule } from '@angular/common';
 
 import { AuthService } from '../../../services/auth.service';
@@ -24,7 +28,12 @@ import { RateLimiterService, RATE_LIMITS } from '../../../services/rate-limiter.
     InputTextModule,
     PasswordModule,
     ButtonModule,
-    ToastModule
+    ToastModule,
+    DividerModule,
+    MessageModule,
+    InputGroupModule,
+    InputGroupAddonModule,
+    SharedModule
   ],
   providers: [MessageService],
   templateUrl: './login.html',

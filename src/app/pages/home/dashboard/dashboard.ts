@@ -13,6 +13,7 @@ import { TableModule } from 'primeng/table';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToastModule } from 'primeng/toast';
 import { SkeletonModule } from 'primeng/skeleton';
+import { PanelModule } from 'primeng/panel';
 import { MessageService } from 'primeng/api';
 
 import { AuthService } from '../../../services/auth.service';
@@ -49,6 +50,7 @@ interface GroupOption {
     TooltipModule,
     ToastModule,
     SkeletonModule,
+    PanelModule,
     HasPermissionDirective,
   ],
   providers: [MessageService],
