@@ -103,7 +103,12 @@ app.all('/rest/v1/groups', async (request, reply) => {
 
 const start = async () => {
     try {
-        await app.register(cors, { origin: true });
+        await app.register(cors, { 
+            origin: true,
+            methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'apikey', 'x-user-id', 'Prefer'],
+            credentials: true
+        });
         const port = process.env.GROUPS_PORT || 3002;
         await app.listen({ port: Number(port), host: '0.0.0.0' });
         console.log(`📂 GROUPS MICROSERVICE RUNNING ON PORT ${port}`);

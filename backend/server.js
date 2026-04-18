@@ -149,6 +149,12 @@ const spawnService = (name, filePath, port) => {
 // ── INICIALIZACIÓN ───────────────────────────────────────────────────────────
 const start = async () => {
     try {
+        await app.register(cors, { 
+            origin: true,
+            methods: ['GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'PATCH'],
+            allowedHeaders: ['Content-Type', 'Authorization', 'apikey', 'x-user-id', 'Prefer'],
+            credentials: true
+        });
         // En producción (Railway), iniciamos los microservicios automáticamente
         if (process.env.NODE_ENV === 'production' || true) { // Forzado a true para asegurar que corran
             spawnService('Tickets', path.join(__dirname, 'services/tickets/index.js'), 3001);
