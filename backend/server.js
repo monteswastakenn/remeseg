@@ -117,9 +117,45 @@ app.all('/api/*', async (req, reply) => {
     });
 });
 
+import { spawn } from 'child_process';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ── ORQUESTADOR DE MICROSERVICIOS (Railway Compatibility) ─────────────────────
+const spawnService = (name, filePath, port) => {
+    console.log(`🚀 Master Orchestrator: Spawning ${name} service on port ${port}...`);
+    
+    const child = spawn('node', [filePath], {
+        env: { ...process.env, PORT: port, [name.toUpperCase() + '_PORT']: port },
+        stdio: 'inherit' // Forward logs to main console
+    });
+
+    child.on('error', (err) => {
+        console.error(`❌ Master Orchestrator: Failed to start ${name}:`, err);
+    });
+
+    child.on('exit', (code) => {
+        if (code !== 0 && code !== null) {
+            console.warn(`⚠️ Master Orchestrator: ${name} service exited with code ${code}. Restarting in 5s...`);
+            setTimeout(() => spawnService(name, filePath, port), 5000);
+        }
+    });
+
+    return child;
+};
+
 // ── INICIALIZACIÓN ───────────────────────────────────────────────────────────
 const start = async () => {
     try {
+        // En producción (Railway), iniciamos los microservicios automáticamente
+        if (process.env.NODE_ENV === 'production' || true) { // Forzado a true para asegurar que corran
+            spawnService('Tickets', path.join(__dirname, 'services/tickets/index.js'), 3001);
+            spawnService('Groups', path.join(__dirname, 'services/groups/index.js'), 3002);
+            spawnService('Users', path.join(__dirname, 'services/users/index.js'), 3003);
+        }
+
         await app.register(cors, { origin: true });
         await app.register(rateLimit, { max: 1000, timeWindow: '1 minute' });
         await app.register(replyFrom, { base: supabaseUrl });
