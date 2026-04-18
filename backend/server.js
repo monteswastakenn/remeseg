@@ -2,6 +2,7 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import replyFrom from '@fastify/reply-from';
 import pkg from 'pg';
 const { Pool } = pkg;
 import { createClient } from '@supabase/supabase-js';
@@ -10,31 +11,30 @@ import { createClient } from '@supabase/supabase-js';
 const rawUrl = process.env.SUPABASE_URL || '';
 const rawKey = process.env.SUPABASE_KEY || '';
 const rawFront = process.env.FRONTEND_URL || '';
-const dbUrl = process.env.DATABASE_URL || '';
+const databaseUrl = process.env.DATABASE_URL || '';
 
 const supabaseUrl = rawUrl.replace(/['"]+/g, '').trim();
 const supabaseKey = rawKey.replace(/['"]+/g, '').trim();
 const frontendUrl = rawFront.replace(/['"]+/g, '').trim();
-const databaseUrl = dbUrl.replace(/\[YOUR-PASSWORD\]/g, process.env.SUPABASE_PG_PASSWORD || '').trim();
 
-console.log('--- INICIO DE GATEWAY UNIFICADO ---');
-console.log('URL de Base de Datos:', databaseUrl ? 'OK (Presente)' : 'FALTA');
+const TICKETS_URL = process.env.TICKETS_SERVICE_URL || 'http://localhost:3001';
+const GROUPS_URL = process.env.GROUPS_SERVICE_URL || 'http://localhost:3002';
+const USERS_URL = process.env.USERS_SERVICE_URL || 'http://localhost:3003';
 
-// Cliente Supabase (Para Auth y compatibilidad)
+console.log('--- API GATEWAY CONFIGURADO (Microservicios) ---');
+
+// Cliente Supabase (Para fallback y Auth)
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Pool de Postgres (Para SQL Directo)
+// Pool de Postgres (Solo para métricas internas en el Gateway)
 const pool = new Pool({
     connectionString: databaseUrl,
     ssl: { rejectUnauthorized: false }
 });
 
-const app = Fastify({ 
-    logger: true,
-    disableRequestLogging: false 
-});
+const app = Fastify({ logger: true });
 
-// ── UTILIDADES DE LOGGING & AUTH ─────────────────────────────────────────────
+// ── UTILIDADES DE AUTH ──────────────────────────────────────────────────────
 const extractUserId = (authHeader) => {
     if (!authHeader) return null;
     try {
@@ -44,135 +44,88 @@ const extractUserId = (authHeader) => {
     } catch (e) { return null; }
 };
 
-// ── HOOKS GLOBALES (Métricas) ────────────────────────────────────────────────
+// ── HOOKS GLOBALES ──────────────────────────────────────────────────────────
 app.addHook('preHandler', async (req) => {
     req.startTime = Date.now();
+    // Inyectar X-User-Id para que los microservicios lo usen
+    const userId = extractUserId(req.headers.authorization);
+    if (userId) {
+        req.headers['x-user-id'] = userId;
+    }
 });
 
 app.addHook('onResponse', async (request, reply) => {
     const duration = Date.now() - (request.startTime || Date.now());
-    const userId = extractUserId(request.headers.authorization);
+    const userId = request.headers['x-user-id'] || null;
     const endpoint = request.url.split('?')[0].split('/').pop() || 'unknown';
 
-    // Guardar métrica mediante SQL directo para máxima velocidad
+    // Guardar métricas de rendimiento global
     await pool.query(
         'INSERT INTO api_metrics (endpoint, method, status_code, response_ms, user_id) VALUES ($1, $2, $3, $4, $5)',
         [endpoint, request.method, reply.statusCode, duration, userId]
     ).catch(err => console.error('Error metrics:', err));
 });
 
-// ── MANEJADOR UNIFICADO DE CRUD (Reemplaza microservicios) ────────────────────
+// ── ORQUESTACIÓN DE MICROSERVICIOS ───────────────────────────────────────────
+
+// Mapeo de Tablas a Microservicios
+const serviceMap = {
+    'tickets': TICKETS_URL,
+    'groups': GROUPS_URL,
+    'users': USERS_URL
+};
+
 app.all('/api/rest/v1/:table', async (request, reply) => {
     const { table } = request.params;
-    const method = request.method;
-    const userId = extractUserId(request.headers.authorization);
-    
-    try {
-        let result;
-        
-        if (method === 'GET') {
-            // Manejo de filtros simples (eq.)
-            let query = `SELECT * FROM ${table}`;
-            const params = [];
-            const filters = Object.keys(request.query).filter(k => k !== 'select' && k !== 'order');
-            
-            if (filters.length > 0) {
-                query += ' WHERE ' + filters.map((key, i) => {
-                    const val = request.query[key].replace('eq.', '');
-                    params.push(val);
-                    return `${key} = $${i + 1}`;
-                }).join(' AND ');
-            }
-            
-            if (request.query.order) {
-                const [col, dir] = request.query.order.split('.');
-                query += ` ORDER BY ${col} ${dir.toUpperCase()}`;
-            }
+    const targetBase = serviceMap[table];
 
-            result = await pool.query(query, params);
-            return result.rows;
-        }
-
-        if (method === 'POST') {
-            const keys = Object.keys(request.body);
-            const values = Object.values(request.body);
-            const query = `INSERT INTO ${table} (${keys.join(', ')}) VALUES (${keys.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING *`;
-            result = await pool.query(query, values);
-            
-            // Log de auditoría
-            await pool.query(
-                'INSERT INTO audit_logs (user_id, action, resource, new_value, ip_address) VALUES ($1, $2, $3, $4, $5)',
-                [userId, 'insert', table, request.body, request.ip]
-            );
-
-            reply.code(201);
-            return result.rows; // PostgREST devuelve array
-        }
-
-        if (method === 'PATCH') {
-            const id = request.query.id.replace('eq.', '');
-            const keys = Object.keys(request.body);
-            const values = Object.values(request.body);
-            const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');
-            const query = `UPDATE ${table} SET ${setClause} WHERE id = $${keys.length + 1} RETURNING *`;
-            result = await pool.query(query, [...values, id]);
-
-            // Log de auditoría
-            await pool.query(
-                'INSERT INTO audit_logs (user_id, action, resource, resource_id, new_value, ip_address) VALUES ($1, $2, $3, $4, $5, $6)',
-                [userId, 'update', table, id, request.body, request.ip]
-            );
-
-            return result.rows;
-        }
-
-        if (method === 'DELETE') {
-            const id = request.query.id.replace('eq.', '');
-            await pool.query(`DELETE FROM ${table} WHERE id = $1`, [id]);
-
-            // Log de auditoría
-            await pool.query(
-                'INSERT INTO audit_logs (user_id, action, resource, resource_id, ip_address) VALUES ($1, $2, $3, $4, $5)',
-                [userId, 'delete', table, id, request.ip]
-            );
-
-            reply.code(204);
-            return null;
-        }
-
-    } catch (err) {
-        console.error(`Error en operación ${method} sobre ${table}:`, err);
-        reply.code(500).send({ error: err.message });
+    if (targetBase) {
+        // Redirigir al microservicio correspondiente
+        return reply.from(request.url.replace(/^\/api/, ''), {
+            base: targetBase,
+            rewriteRequestHeaders: (request, headers) => ({
+                ...headers,
+                apikey: supabaseKey, // Seguimos inyectando la apikey por si el microservicio la necesita
+                'x-user-id': headers['x-user-id'] // Asegurar que el ID viaje
+            })
+        });
     }
+
+    // FALLBACK: Si no es una tabla dedicada, usar proxy directo a Supabase
+    const targetPath = request.url.replace(/^\/api/, '');
+    return reply.from(targetPath, {
+        base: supabaseUrl,
+        rewriteRequestHeaders: (request, headers) => ({
+            ...headers,
+            apikey: supabaseKey,
+        })
+    });
+});
+
+// Proxy para Auth y otras rutas
+app.all('/api/*', async (req, reply) => {
+    const targetPath = req.url.replace(/^\/api/, '');
+    return reply.from(targetPath, {
+        base: supabaseUrl,
+        rewriteRequestHeaders: (request, headers) => ({
+            ...headers,
+            apikey: supabaseKey,
+        })
+    });
 });
 
 // ── INICIALIZACIÓN ───────────────────────────────────────────────────────────
 const start = async () => {
     try {
         await app.register(cors, { origin: true });
-        await app.register(rateLimit, { max: 500, timeWindow: '1 minute' });
-        
-        // Proxy para otras rutas (Auth, etc.)
-        if (supabaseUrl) {
-            await app.register(replyFrom, { base: supabaseUrl });
-        }
+        await app.register(rateLimit, { max: 1000, timeWindow: '1 minute' });
+        await app.register(replyFrom, { base: supabaseUrl });
 
-        app.get('/health', async () => ({ status: 'ok', db: 'connected' }));
-
-        // FALLBACK PROXY: Si no es una de nuestras rutas manuales, reenviar a Supabase
-        app.all('/api/*', async (req, reply) => {
-            const targetPath = req.url.replace(/^\/api/, '');
-            return reply.from(targetPath, {
-                rewriteRequestHeaders: (request, headers) => ({
-                    ...headers,
-                    apikey: supabaseKey,
-                })
-            });
-        });
+        app.get('/health', async () => ({ status: 'ok', gateway: 'active' }));
 
         const port = process.env.PORT || 3000;
         await app.listen({ port: Number(port), host: '0.0.0.0' });
-        console.log(`🚀 UNIFIED GATEWAY READY ON PORT ${port}`);
+        console.log(`🚀 API GATEWAY ORCHESTRATOR READY ON PORT ${port}`);
     } catch (err) {
         console.error(err);
         process.exit(1);

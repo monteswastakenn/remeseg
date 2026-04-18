@@ -6,7 +6,13 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "dev:gateway": "cd backend && npm start",
+    "dev:tickets": "cd backend && node services/tickets/index.js",
+    "dev:groups": "cd backend && node services/groups/index.js",
+    "dev:users": "cd backend && node services/users/index.js",
+    "dev": "npm run dev:gateway & npm run dev:tickets & npm run dev:groups & npm run dev:users & npm run start",
+    "install:all": "npm install && cd backend && npm install"
   },
   "prettier": {
     "printWidth": 100,

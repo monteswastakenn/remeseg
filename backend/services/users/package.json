@@ -1,0 +1,13 @@
+{
+  "name": "users-service",
+  "version": "1.0.0",
+  "description": "Microservicio de gestión de usuarios",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "fastify": "^5.8.5",
+    "pg": "^8.11.0",
+    "dotenv": "^17.4.2",
+    "@fastify/cors": "^10.0.1"
+  }
+}
