@@ -16,7 +16,7 @@ const app = Fastify({ logger: true });
 const getUserId = (req) => req.headers['x-user-id'] || null;
 
 // --- CRUD USERS ---
-app.all('/api/rest/v1/users', async (request, reply) => {
+app.all('/rest/v1/users', async (request, reply) => {
     const method = request.method;
     const currentUserId = getUserId(request);
     
@@ -26,9 +26,14 @@ app.all('/api/rest/v1/users', async (request, reply) => {
         if (method === 'GET') {
             let query = 'SELECT * FROM users';
             const params = [];
-            const filters = Object.keys(request.query).filter(k => k !== 'select' && k !== 'order');
+            const filters = Object.keys(request.query).filter(k => k !== 'id' && k !== 'select' && k !== 'order');
             
-            if (filters.length > 0) {
+            // Handle ID specially if present in query
+            if (request.query.id) {
+                const idVal = request.query.id.replace('eq.', '');
+                query += ' WHERE id = $1';
+                params.push(idVal);
+            } else if (filters.length > 0) {
                 query += ' WHERE ' + filters.map((key, i) => {
                     const val = request.query[key].replace('eq.', '');
                     params.push(val);
@@ -38,7 +43,7 @@ app.all('/api/rest/v1/users', async (request, reply) => {
             
             if (request.query.order) {
                 const [col, dir] = request.query.order.split('.');
-                query += ` ORDER BY ${col} ${dir.toUpperCase()}`;
+                query += ` ORDER BY ${col} ${dir ? dir.toUpperCase() : 'ASC'}`;
             }
 
             result = await pool.query(query, params);
@@ -53,14 +58,15 @@ app.all('/api/rest/v1/users', async (request, reply) => {
             
             await pool.query(
                 'INSERT INTO audit_logs (user_id, action, resource, new_value, ip_address) VALUES ($1, $2, $3, $4, $5)',
-                [currentUserId, 'insert', 'users', request.body, request.ip]
-            );
+                [currentUserId, 'insert', 'users', JSON.stringify(request.body), request.ip]
+            ).catch(e => console.error('Audit Error:', e));
 
             reply.code(201);
             return result.rows;
         }
 
         if (method === 'PATCH') {
+            if (!request.query.id) throw new Error('Query parameter "id" is required for PATCH');
             const id = request.query.id.replace('eq.', '');
             const keys = Object.keys(request.body);
             const values = Object.values(request.body);
@@ -69,9 +75,9 @@ app.all('/api/rest/v1/users', async (request, reply) => {
             result = await pool.query(query, [...values, id]);
 
             await pool.query(
-                'INSERT INTO audit_logs (user_id, action, resource, resource_id, new_value, ip_address) VALUES ($1, $2, $3, $4, $5, $6)',
-                [currentUserId, 'update', 'users', id, request.body, request.ip]
-            );
+                'INSERT INTO audit_logs (user_id, action, resource, new_value, ip_address) VALUES ($1, $2, $3, $4, $5)',
+                [currentUserId, 'update', 'users', JSON.stringify({ id, ...request.body }), request.ip]
+            ).catch(e => console.error('Audit Error:', e));
 
             return result.rows;
         }

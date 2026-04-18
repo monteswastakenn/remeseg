@@ -80,14 +80,21 @@ app.all('/api/rest/v1/:table', async (request, reply) => {
     const targetBase = serviceMap[table];
 
     if (targetBase) {
-        // Redirigir al microservicio correspondiente
+        app.log.info(`📡 Proxying ${request.method} to ${table} service -> ${targetBase}`);
+        
         return reply.from(request.url.replace(/^\/api/, ''), {
             base: targetBase,
             rewriteRequestHeaders: (request, headers) => ({
                 ...headers,
-                apikey: supabaseKey, // Seguimos inyectando la apikey por si el microservicio la necesita
-                'x-user-id': headers['x-user-id'] // Asegurar que el ID viaje
-            })
+                apikey: supabaseKey,
+                'x-user-id': headers['x-user-id']
+            }),
+            onResponse: (request, reply, res) => {
+                if (res.statusCode >= 400) {
+                    app.log.error(`❌ Microservice ${table} returned error ${res.statusCode} for ${request.method} ${request.url}`);
+                }
+                reply.send(res);
+            }
         });
     }
 
