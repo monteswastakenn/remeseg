@@ -88,18 +88,14 @@ app.all('/api/rest/v1/:table', async (request, reply) => {
                 ...headers,
                 apikey: supabaseKey,
                 'x-user-id': headers['x-user-id']
-            }),
-            onResponse: (request, reply, res) => {
-                if (res.statusCode >= 400) {
-                    app.log.error(`❌ Microservice ${table} returned error ${res.statusCode} for ${request.method} ${request.url}`);
-                }
-                reply.send(res);
-            }
+            })
         });
     }
 
     // FALLBACK: Si no es una tabla dedicada, usar proxy directo a Supabase
     const targetPath = request.url.replace(/^\/api/, '');
+    app.log.info(`☁️ Fallback proxy to Supabase: ${targetPath}`);
+    
     return reply.from(targetPath, {
         base: supabaseUrl,
         rewriteRequestHeaders: (request, headers) => ({
